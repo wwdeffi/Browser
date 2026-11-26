@@ -71,8 +71,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "ВАШ_АККАУНТ",
-      "repo": "ВАШ_РЕПО"
+      "owner": "wwdeffi",
+      "repo": "Browser"
     },
     "afterPack": "build/fuses.js"
   }
