@@ -1101,7 +1101,7 @@ function ptFirefoxMainWorld(ua) {
   const GOOGLE_AUTH_HOST_RE = /^accounts\.google\.(?:com|[a-z]{2}|(?:co|com)\.[a-z]{2})$/;
   if (!(h === 'accounts.youtube.com' || h === 'myaccount.google.com' || GOOGLE_AUTH_HOST_RE.test(h))) return;
   // Пустая строка = не менять UA и navigator.*: тогда JS совпадает с HTTP-заголовками. Passkey отключается в любом случае
-  const GOOGLE_FIREFOX_UA = true;
+  const GOOGLE_FIREFOX_UA = false;
   const UA = GOOGLE_FIREFOX_UA ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0' : '';
   try {
     if (typeof contextBridge.executeInMainWorld === 'function') {

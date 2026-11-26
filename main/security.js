@@ -87,7 +87,7 @@ function cleanUserAgent(app) {
 const FIREFOX_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0';
 // true — на доменах входа Google подставлять Firefox-UA; false — везде один Chrome-UA (заголовки, navigator.userAgent и client hints совпадают).
 // Если вход в Google перестал работать, переключите значение и перезапустите браузер.
-const GOOGLE_FIREFOX_UA = true;
+const GOOGLE_FIREFOX_UA = false;
 const GOOGLE_AUTH_HOSTS = new Set(['accounts.youtube.com', 'myaccount.google.com']);
 // Только настоящие домены Google: com, ccTLD (de, fr…) и составные (co.uk, com.au); иначе accounts.google.com.evil.io тоже совпал бы
 const GOOGLE_AUTH_HOST_RE = /^accounts\.google\.(?:com|[a-z]{2}|(?:co|com)\.[a-z]{2})$/;
