@@ -1,0 +1,20 @@
+# зависимости и результат сборки
+node_modules/
+dist/
+
+# сертификаты подписи и секреты
+*.pfx
+*.p12
+*.pem
+.env
+.env.*
+
+# мусор ОС и редакторов
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
+
+# логи
+*.log
+npm-debug.log*

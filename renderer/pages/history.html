@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>История</title>
+  <link rel="stylesheet" href="browser://styles/tokens.css">
+  <link rel="stylesheet" href="browser://history/history.css">
+  <script src="browser://history/history.js" defer></script>
+</head>
+<body>
+  <div class="shell" id="app">
+    <header class="top">
+      <h1 class="title">История</h1>
+      <label class="search" for="search">
+        <svg class="search-ico" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
+          <circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M13 13l4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        <input id="search" class="search-input" type="search" placeholder="Поиск по заголовку и адресу" autocomplete="off" spellcheck="false" aria-label="Поиск по истории">
+      </label>
+      <button type="button" class="btn" id="btn-clear">Очистить историю…</button>
+    </header>
+
+    <p class="note" id="incognito-notice" role="status" hidden>
+      <strong>Режим Инкогнито.</strong> История здесь не ведётся, а история обычного режима не показывается и не изменяется.
+    </p>
+    <p class="summary" id="summary" role="status" aria-live="polite"></p>
+
+    <main class="scroller" id="scroller">
+      <div id="list"></div>
+      <div class="empty" id="empty" hidden>
+        <div class="empty-title" id="empty-title"></div>
+        <div class="empty-hint" id="empty-hint"></div>
+      </div>
+      <div class="more" id="more" hidden>
+        <button type="button" class="btn" id="btn-more">Показать ещё</button>
+      </div>
+    </main>
+  </div>
+
+  <dialog class="dlg" id="clear-dialog" aria-labelledby="dlg-title">
+    <div class="dlg-body">
+      <h2 class="dlg-title" id="dlg-title">Очистить историю</h2>
+      <p class="row-hint">Выберите, за какой период удалить записи. Это действие нельзя отменить.</p>
+      <div class="opts" role="radiogroup" aria-label="Период очистки">
+        <label class="opt">
+          <input type="radio" name="range" value="hour" checked>
+          <span class="opt-text">
+            <span class="opt-title">За последний час</span>
+            <span class="opt-count" data-count="hour"></span>
+          </span>
+        </label>
+        <label class="opt">
+          <input type="radio" name="range" value="today">
+          <span class="opt-text">
+            <span class="opt-title">За сегодня</span>
+            <span class="opt-count" data-count="today"></span>
+          </span>
+        </label>
+        <label class="opt">
+          <input type="radio" name="range" value="all">
+          <span class="opt-text">
+            <span class="opt-title">За всё время</span>
+            <span class="opt-count" data-count="all"></span>
+          </span>
+        </label>
+      </div>
+      <div class="dlg-actions">
+        <button type="button" class="btn" id="dlg-cancel">Отмена</button>
+        <button type="button" class="btn danger" id="dlg-confirm">Удалить</button>
+      </div>
+    </div>
+  </dialog>
+
+  <p class="fatal" id="fatal" hidden>Страница истории недоступна: внутренний API не подключён.</p>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <template id="tpl-item">
+    <li class="item">
+      <a class="item-link" href="#" draggable="false">
+        <span class="item-time"></span>
+        <span class="item-ico" aria-hidden="true"></span>
+        <span class="item-text">
+          <span class="item-title"></span>
+          <span class="item-url"></span>
+        </span>
+        <span class="item-visits" hidden></span>
+      </a>
+      <button type="button" class="item-del" title="Удалить из истории" aria-label="Удалить из истории">
+        <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true" focusable="false">
+          <path d="M5 5l10 10M15 5L5 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </li>
+  </template>
+</body>
+</html>

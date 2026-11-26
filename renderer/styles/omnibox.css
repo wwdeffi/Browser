@@ -1,0 +1,45 @@
+/* Токены из tokens.css; значения после запятой — запасные, если токена нет */
+:root {
+  --ob-bg: var(--bg-card, #151823);
+  --ob-border: var(--border-subtle, rgba(255, 255, 255, 0.10));
+  --ob-text: var(--text-primary, #e8eaf2);
+  --ob-muted: var(--text-muted, #8b90a3);
+  --ob-accent: var(--accent, #60a5fa);
+  --ob-radius: 10px;
+}
+:root[data-theme="light"] {
+  --ob-bg: var(--bg-card, #ffffff);
+  --ob-border: var(--border-subtle, rgba(0, 0, 0, 0.12));
+  --ob-text: var(--text-primary, #1a1d29);
+  --ob-muted: var(--text-muted, #666b7d);
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden; background: transparent;
+  font: 13px/1.35 system-ui, "Segoe UI", sans-serif; color: var(--ob-text);
+  user-select: none; cursor: default;
+}
+
+#list {
+  height: 100%;
+  padding: var(--omnibox-padding, 6px) 6px;
+  background: var(--ob-bg);
+  border: 1px solid var(--ob-border);
+  border-radius: var(--ob-radius);
+  overflow: hidden;
+}
+
+.row {
+  display: flex; align-items: center; gap: 10px;
+  height: var(--omnibox-row-height, 36px);
+  padding: 0 10px; border-radius: 7px;
+}
+.row.selected { background: color-mix(in srgb, var(--ob-accent) 18%, transparent); }
+
+.icon { flex: none; width: 16px; height: 16px; color: var(--ob-muted); }
+.row.selected .icon { color: var(--ob-accent); }
+
+.title { flex: none; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sub { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ob-muted); font-size: 12px; }
+.badge { flex: none; margin-left: auto; color: var(--ob-accent); font-size: 11.5px; white-space: nowrap; }

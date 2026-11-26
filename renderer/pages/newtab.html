@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Новая вкладка</title>
+  <link rel="stylesheet" href="browser://styles/tokens.css">
+  <link rel="stylesheet" href="browser://newtab/newtab.css">
+  <script src="browser://newtab/newtab.js" defer></script>
+</head>
+<body>
+  <div id="backdrop-stage" aria-hidden="true">
+    <div class="bg-slot active" id="bg-slot-0">
+      <div class="bg-slot-fill"></div>
+      <svg class="bg-slot-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"></svg>
+    </div>
+    <div class="bg-slot" id="bg-slot-1">
+      <div class="bg-slot-fill"></div>
+      <svg class="bg-slot-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"></svg>
+    </div>
+  </div>
+
+  <canvas id="ambient-canvas" aria-hidden="true"></canvas>
+  <div id="wallpaper-overlay"></div>
+  <div id="wallpaper-dim"></div>
+
+  <main class="scene" id="scene">
+    <aside class="left-rail">
+      <section class="clock-cluster" id="widget-clock">
+        <div class="date-card">
+          <div class="date-weekday" id="date-weekday"></div>
+          <div class="date-day" id="date-day"></div>
+          <div class="date-month" id="date-month"></div>
+        </div>
+        <div class="time-block">
+          <div class="clock-time">
+            <span class="clock-hm" id="clock-hm"></span><span class="clock-sec" id="clock-sec"></span>
+          </div>
+          <div class="clock-greeting" id="clock-greeting"></div>
+        </div>
+      </section>
+
+      <section class="links-widget" id="widget-links">
+        <div class="section-head">
+          <div class="section-label">Быстрый доступ</div>
+        </div>
+
+        <div class="links-list layout-grid" id="links-list"></div>
+
+        <button class="add-link-trigger is-hidden" id="btn-show-add-link" type="button">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+            <path d="M8 3v10M3 8h10"/>
+          </svg>
+          Добавить сайт
+        </button>
+
+        <form class="add-link-form is-hidden" id="add-link-form">
+          <input class="mini-input" id="link-title-input" type="text" placeholder="Название (например, YouTube)" maxlength="40" required>
+          <input class="mini-input" id="link-url-input" type="text" placeholder="Адрес (например, youtube.com)" maxlength="512" required>
+          <div class="mini-actions">
+            <button class="btn-ghost" id="btn-cancel-link" type="button">Отмена</button>
+            <button class="btn-solid" type="submit">Добавить</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="bm-groups is-hidden" id="bm-groups" aria-label="Закладки"></section>
+    </aside>
+
+    <section class="center-top" id="widget-search">
+      <form class="search-pill" id="search-form">
+        <div class="engine-picker" id="engine-picker">
+          <button type="button" class="engine-btn" id="engine-btn" title="Выбрать поисковик">
+            <span class="engine-badge" id="engine-badge">G</span>
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 4.5L6 7.5l3-3"/>
+            </svg>
+          </button>
+          <div class="engine-menu is-hidden" id="engine-menu"></div>
+        </div>
+        <input id="search-input" type="text" autocomplete="off" spellcheck="false" placeholder="Поиск или введите адрес... (нажмите /)">
+        <button type="submit" class="search-submit" title="Перейти или найти">Enter</button>
+      </form>
+
+      <div class="bang-hints">
+        <button type="button" class="bang-chip" data-bang="!yt "><b>!yt</b> YouTube</button>
+        <button type="button" class="bang-chip" data-bang="!y "><b>!y</b> Яндекс</button>
+        <button type="button" class="bang-chip" data-bang="!w "><b>!w</b> Вики</button>
+        <button type="button" class="bang-chip" data-bang="!gh "><b>!gh</b> GitHub</button>
+      </div>
+
+      <nav class="bm-bar" id="bm-bar" aria-label="Папки закладок"></nav>
+    </section>
+
+    <aside class="right-rail" id="right-rail">
+      <section class="weather-card is-hidden" id="widget-weather">
+        <div class="weather-top">
+          <div>
+            <div class="weather-temp" id="weather-temp">--°</div>
+            <button type="button" class="weather-city" id="weather-city" title="Сменить город">Выбрать город</button>
+            <div class="weather-desc" id="weather-desc"></div>
+          </div>
+          <div class="weather-icon" id="weather-icon">🌤️</div>
+        </div>
+        <div class="weather-stats is-hidden" id="weather-stats">
+          <div class="weather-stat"><b id="weather-feels">--</b><span>Ощущается</span></div>
+          <div class="weather-stat"><b id="weather-hum">--</b><span>Влажность</span></div>
+          <div class="weather-stat"><b id="weather-wind">--</b><span>Ветер</span></div>
+        </div>
+        <form class="weather-form is-hidden" id="weather-form">
+          <input class="weather-input" id="weather-input" type="text" placeholder="Город (например, Москва)" maxlength="60" autocomplete="off">
+          <div class="weather-msg" id="weather-msg"></div>
+        </form>
+      </section>
+
+      <section class="todo-card" id="widget-todo">
+        <div class="todo-header">
+          <div class="todo-title-wrap">
+            <h2 class="todo-title">Задачи</h2>
+            <span class="todo-count" id="todo-count">0/0</span>
+          </div>
+          <button class="todo-clear is-hidden" id="btn-clear-done" type="button">Убрать готовые</button>
+        </div>
+
+        <div class="todo-progress-track">
+          <div class="todo-progress-fill" id="todo-progress-fill"></div>
+        </div>
+
+        <form class="todo-add-row" id="todo-form">
+          <input id="todo-input" type="text" autocomplete="off" placeholder="Добавить задачу..." maxlength="160">
+        </form>
+
+        <div class="todo-list" id="todo-list"></div>
+      </section>
+
+      <section class="saved-bm-card" id="widget-saved-bm">
+        <div class="todo-header">
+          <div class="todo-title-wrap">
+            <h2 class="todo-title">Закладки</h2>
+            <span class="todo-count" id="sbm-count">0</span>
+          </div>
+        </div>
+        <div class="saved-bm-list" id="sbm-list"></div>
+      </section>
+    </aside>
+  </main>
+
+  <nav id="side-dock" aria-label="Быстрые действия">
+    <button class="side-btn" id="side-themes" type="button" title="Темы и вид">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="5.5"/><circle cx="5.6" cy="6.6" r=".7" fill="currentColor"/><circle cx="8.8" cy="5.4" r=".7" fill="currentColor"/><circle cx="10.6" cy="8.4" r=".7" fill="currentColor"/></svg>
+    </button>
+    <button class="side-btn" id="side-search" type="button" title="Поиск">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+    </button>
+    <button class="side-btn" id="side-todo" type="button" title="Новая задача">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3 3 7-7"/></svg>
+    </button>
+    <button class="side-btn" id="side-weather" type="button" title="Погода">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12a3 3 0 0 1-.3-6A4 4 0 0 1 12 6.5a2.8 2.8 0 0 1-.5 5.5z"/></svg>
+    </button>
+    <button class="side-btn" id="side-gemini" type="button" title="Gemini">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0c.4 4.4 3.6 7.6 8 8-4.4.4-7.6 3.6-8 8-.4-4.4-3.6-7.6-8-8 4.4-.4 7.6-3.6 8-8z"/></svg>
+    </button>
+  </nav>
+
+
+  <div id="fab-bar">
+    <button id="perm-fab" type="button" aria-expanded="false" aria-controls="widget-perms" title="Запреты: камера, микрофон, местоположение">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.6l5.2 2v4c0 3.2-2.2 5.6-5.2 6.8-3-1.2-5.2-3.6-5.2-6.8v-4z"/><path d="M5.6 8l1.7 1.7 3.1-3.4"/></svg>
+      Запреты
+      <span class="perm-fab-count" id="perm-fab-count">0</span>
+    </button>
+    <button id="customize-btn" type="button" title="Открыть студию тем и виджетов">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="8" cy="8" r="2.3"/>
+        <path d="M8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1"/>
+      </svg>
+      Темы и вид
+    </button>
+  </div>
+
+  <section class="perm-card perm-pop" id="widget-perms" aria-label="Запреты" aria-hidden="true">
+    <div class="todo-header">
+      <div class="todo-title-wrap">
+        <h2 class="todo-title">Запреты</h2>
+        <span class="todo-count" id="perm-count">0/3</span>
+      </div>
+      <button class="perm-close" id="perm-close" type="button" title="Свернуть" aria-label="Свернуть запреты">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5L6 7.5l3-3"/></svg>
+      </button>
+    </div>
+    <div class="perm-list">
+      <button type="button" class="perm-row" data-perm="blockCamera" aria-pressed="false">
+        <span class="perm-ico"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.8" y="4.2" width="9" height="7.6" rx="2"/><path d="M10.8 7l3.4-2v6l-3.4-2z"/></svg></span>
+        <span class="perm-name">Камера</span><span class="perm-state">По запросу</span><span class="perm-switch"><i></i></span>
+      </button>
+      <button type="button" class="perm-row" data-perm="blockMicrophone" aria-pressed="false">
+        <span class="perm-ico"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.6" y="1.8" width="4.8" height="7.4" rx="2.4"/><path d="M3.4 7.8a4.6 4.6 0 0 0 9.2 0M8 12.4v2"/></svg></span>
+        <span class="perm-name">Микрофон</span><span class="perm-state">По запросу</span><span class="perm-switch"><i></i></span>
+      </button>
+      <button type="button" class="perm-row" data-perm="blockGeolocation" aria-pressed="false">
+        <span class="perm-ico"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14.2s4.6-4.1 4.6-7.7a4.6 4.6 0 0 0-9.2 0c0 3.6 4.6 7.7 4.6 7.7z"/><circle cx="8" cy="6.5" r="1.6"/></svg></span>
+        <span class="perm-name">Местоположение</span><span class="perm-state">Недоступно сайтам</span><span class="perm-switch"><i></i></span>
+      </button>
+    </div>
+  </section>
+
+
+  <div id="drawer-backdrop"></div>
+  <aside id="customize-drawer" aria-label="Студия тем и настроек">
+    <div class="drawer-head">
+      <h2>Студия тем</h2>
+      <button class="drawer-close" id="btn-close-drawer" type="button" aria-label="Закрыть">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="drawer-group" id="hud-group">
+      <div class="drawer-label">Окошки (HUD)</div>
+      <div class="slider-row">
+        <div class="slider-head"><span>Непрозрачность окошек</span><span id="glass-value">56%</span></div>
+        <input id="glass-slider" type="range" min="0" max="100" step="2" value="56">
+      </div>
+      <div class="hud-presets" id="hud-presets">
+        <button type="button" class="mini-btn" data-alpha="0">Прозрачные</button>
+        <button type="button" class="mini-btn" data-alpha="28">Лёгкие</button>
+        <button type="button" class="mini-btn" data-alpha="56">Стекло</button>
+        <button type="button" class="mini-btn" data-alpha="90">Плотные</button>
+      </div>
+      <label class="color-row"><span>Цвет окошек</span>
+        <input type="color" id="pick-card" value="#0a0e1a"><button type="button" class="mini-btn" id="reset-card">Авто</button></label>
+      <label class="toggle-row"><span>Размытие за окошками</span><input type="checkbox" id="toggle-hud-blur" checked></label>
+      <label class="toggle-row"><span>Рамки и тени окошек</span><input type="checkbox" id="toggle-hud-border" checked></label>
+    </div>
+
+    <div class="drawer-group">
+      <div class="drawer-label">Готовые темы</div>
+      <div class="presets-grid" id="presets-grid"></div>
+    </div>
+
+    <div class="drawer-group">
+      <div class="drawer-label">Свои обои (JPG / PNG / WebP / GIF / MP4 / WebM)</div>
+      <div class="upload-row">
+        <button class="upload-btn" id="btn-pick-wallpaper" type="button">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="12" height="10" rx="2"/>
+            <circle cx="5.8" cy="6.6" r="1.1"/>
+            <path d="M3 11.8l3.2-3.1 2.2 2.1 2.3-2.4L13 11.8"/>
+          </svg>
+          Выбрать обои с ПК
+        </button>
+        <button class="btn-ghost btn-tall is-hidden" id="btn-clear-wallpaper" type="button">Сбросить</button>
+      </div>
+      <div class="drawer-error is-hidden" id="wallpaper-error"></div>
+    </div>
+
+    <div class="drawer-group is-hidden" id="transparent-group">
+      <div class="drawer-label">Прозрачная оболочка (только для своих обоев)</div>
+      <label class="toggle-row"><span>Рамка, вкладки и адресная строка прозрачные</span><input type="checkbox" id="toggle-transparent"></label>
+      <div class="drawer-hint">Обои будут видны за рамкой окна, вкладками и адресной строкой. Готовые темы уже оформлены, им это не нужно. Затемнение и размытие ниже действуют и на оболочку.</div>
+    </div>
+
+    <div class="drawer-group is-hidden" id="custom-accent-group">
+      <div class="drawer-label">Цвет акцента под ваши обои</div>
+      <div class="accent-swatches" id="accent-swatches"></div>
+      <label class="color-row"><span>Любой свой цвет акцента</span><input type="color" id="pick-accent" value="#38bdf8"></label>
+      <label class="color-row"><span>Цвет времени</span>
+        <input type="color" id="pick-clock" value="#ffffff"><button type="button" class="mini-btn" id="reset-clock">Авто</button></label>
+      <div class="color-row color-row--flush"><span>Цвет текста на обоях</span></div>
+      <div class="seg-row" id="text-mode-row">
+        <button type="button" class="mini-btn" data-mode="auto">Авто</button>
+        <button type="button" class="mini-btn" data-mode="lightText">Светлый</button>
+        <button type="button" class="mini-btn" data-mode="darkText">Тёмный</button>
+      </div>
+    </div>
+
+    <div class="drawer-group">
+      <div class="drawer-label">Стекло и атмосфера</div>
+      <div class="slider-row">
+        <div class="slider-head"><span>Затемнение фона</span><span id="dim-value">22%</span></div>
+        <input id="dim-slider" type="range" min="0" max="80" step="2" value="22">
+      </div>
+      <div class="slider-row">
+        <div class="slider-head"><span>Размытие фона</span><span id="blur-value">0 px</span></div>
+        <input id="blur-slider" type="range" min="0" max="18" step="1" value="0">
+      </div>
+      <label class="toggle-row"><span>Живая анимация фона</span><input type="checkbox" id="toggle-animate" checked></label>
+      <label class="toggle-row"><span>Мягкий параллакс</span><input type="checkbox" id="toggle-parallax" checked></label>
+    </div>
+
+    <div class="drawer-group">
+      <div class="drawer-label">Стиль быстрого доступа</div>
+      <div class="segment-control">
+        <button type="button" class="segment-btn active" id="layout-btn-grid">Плитки</button>
+        <button type="button" class="segment-btn" id="layout-btn-list">Список</button>
+      </div>
+    </div>
+
+    <div class="drawer-group">
+      <div class="drawer-label">Виджеты на экране</div>
+      <label class="toggle-row"><span>Дата и часы</span><input type="checkbox" id="toggle-clock" checked></label>
+      <label class="toggle-row"><span>Секунды на часах</span><input type="checkbox" id="toggle-seconds" checked></label>
+      <label class="toggle-row"><span>Приветствие под часами</span><input type="checkbox" id="toggle-greeting" checked></label>
+      <label class="toggle-row"><span>Быстрые ссылки</span><input type="checkbox" id="toggle-links" checked></label>
+      <label class="toggle-row"><span>Строка поиска</span><input type="checkbox" id="toggle-search" checked></label>
+      <label class="toggle-row"><span>Карточка задач (To-Do)</span><input type="checkbox" id="toggle-todo" checked></label>
+      <label class="toggle-row"><span>Погода</span><input type="checkbox" id="toggle-weather" checked></label>
+      <label class="toggle-row"><span>Закладки (★)</span><input type="checkbox" id="toggle-saved-bm" checked></label>
+      <label class="toggle-row"><span>Боковая мини-панель</span><input type="checkbox" id="toggle-sidedock" checked></label>
+    </div>
+  </aside>
+
+</body>
+</html>

@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Настройки</title>
+  <link rel="stylesheet" href="browser://styles/tokens.css">
+  <script src="browser://styles/chromeTheme.js"></script>
+  <link rel="stylesheet" href="browser://settings/settings.css">
+  <script src="browser://settings/settings.js" defer></script>
+</head>
+<body>
+  <div class="shell" id="shell">
+    <aside class="nav">
+      <h1 class="nav-title">Настройки</h1>
+      <nav class="nav-list" aria-label="Разделы настроек">
+        <a class="nav-item" href="#general" data-section="general">Основные</a>
+        <a class="nav-item" href="#privacy" data-section="privacy">Приватность и AdBlock</a>
+        <a class="nav-item" href="#network" data-section="network">Сеть и Прокси</a>
+        <a class="nav-item" href="#permissions" data-section="permissions">Разрешения сайтов</a>
+        <a class="nav-item" href="#data" data-section="data">Очистка данных</a>
+        <a class="nav-item" href="#bookmarks" data-section="bookmarks">Закладки</a>
+        <a class="nav-item" href="#passwords" data-section="passwords">Пароли и автозаполнение</a>
+        <a class="nav-item" href="#extensions" data-section="extensions">Расширения</a>
+        <a class="nav-item" href="#about" data-section="about">Обновления</a>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <p class="note" id="incognito-notice" role="status" hidden>
+        <strong>Режим Инкогнито.</strong> Настройки браузера общие и сохраняются как обычно, но очистка данных ниже
+        затрагивает только текущий инкогнито-сеанс. Данные обычного режима не изменятся.
+      </p>
+      <!-- Новые разделы: добавить <section class="section" data-section="id" hidden>, ссылку в .nav-list и id в SECTIONS (settings.js) -->
+      <section class="section" id="general" data-section="general" hidden>
+        <h2>Основные</h2>
+        <div class="card">
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Поисковая система</div>
+              <div class="row-hint">Используется в адресной строке и на новой вкладке</div>
+            </div>
+            <select class="field" id="sel-engine" aria-label="Поисковая система"></select>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Тема оформления</div>
+              <div class="row-hint">Цвет оболочки выбирается на новой вкладке или кнопкой-палитрой</div>
+            </div>
+            <div class="seg" role="radiogroup" aria-label="Тема оформления" data-seg="theme">
+              <button type="button" role="radio" aria-checked="false" data-value="dark">Тёмная</button>
+              <button type="button" role="radio" aria-checked="false" data-value="light">Светлая</button>
+              <button type="button" role="radio" aria-checked="false" data-value="system">Системная</button>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Восстанавливать вкладки</div>
+              <div class="row-hint">При запуске открывать вкладки прошлого сеанса</div>
+            </div>
+            <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Восстанавливать вкладки" data-toggle="restoreSession"></button>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Авто-усыпление вкладок</div>
+              <div class="row-hint">Фоновые вкладки без активности освобождают память</div>
+            </div>
+            <select class="field" id="sel-sleep" aria-label="Авто-усыпление вкладок"></select>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Режим экономии энергии</div>
+              <div class="row-hint">Отключает размытие (backdrop-filter) в интерфейсе и на внутренних страницах. «Авто» — только при работе от батареи</div>
+              <div class="row-hint" id="energy-status" role="status"></div>
+            </div>
+            <select class="field" id="sel-energy" aria-label="Режим экономии энергии">
+              <option value="auto">Авто (от батареи)</option>
+              <option value="on">Всегда включён</option>
+              <option value="off">Выключен</option>
+            </select>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Усыпить фоновые вкладки сейчас</div>
+              <div class="row-hint">Активная и закреплённая логика остаётся как в меню браузера</div>
+            </div>
+            <button type="button" class="btn" id="btn-sleep-now">Усыпить</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="privacy" data-section="privacy" hidden>
+        <h2>Приватность и AdBlock</h2>
+        <div class="card">
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Блокировка рекламы и трекеров</div>
+              <div class="row-hint">Работает на уровне сессии для всех вкладок</div>
+            </div>
+            <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Блокировка рекламы и трекеров" data-toggle="adblock"></button>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Косметическая фильтрация</div>
+              <div class="row-hint">Скрывает рекламные блоки и пустые рекламные контейнеры на страницах. Действует на новых страницах, работает только при включённой блокировке рекламы</div>
+            </div>
+            <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Косметическая фильтрация" data-toggle="adblockCosmetic"></button>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Заблокировано запросов</div>
+              <div class="row-hint">С запуска браузера</div>
+            </div>
+            <div class="stat" id="blocked-count">0</div>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Красивый стиль поисковика</div>
+              <div class="row-hint">Страницы поиска оформляются под тему браузера</div>
+            </div>
+            <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Красивый стиль поисковика" data-toggle="prettySearch"></button>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Только HTTPS</div>
+              <div class="row-hint">Адреса http:// сначала открываются по https://. Если сайт не поддерживает HTTPS, браузер предупредит, и можно перейти на свой риск (исключение действует до закрытия браузера)</div>
+            </div>
+            <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Только HTTPS" data-toggle="httpsOnly"></button>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Блокировать сторонние (third-party) cookies</div>
+              <div class="row-hint">Cookie и Set-Cookie не отправляются и не принимаются в кросс-сайтовых подзапросах, хранилище разделяется по сайту верхнего уровня. Может нарушить вход через виджеты и встроенные формы. Разделение хранилища применится после перезапуска браузера</div>
+            </div>
+            <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Блокировать сторонние cookies" data-toggle="blockThirdPartyCookies"></button>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Очищать ссылки от трекинговых меток</div>
+              <div class="row-hint">Убирает utm_*, fbclid, gclid, yclid, mc_eid, _openstat, roistat* при переходах. Ссылки авторизации (OAuth: code, state и др.) и POST-запросы не затрагиваются</div>
+            </div>
+            <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Очищать ссылки от трекинговых меток" data-toggle="stripTrackingParams"></button>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Защита от цифрового отпечатка (Fingerprinting) в Инкогнито</div>
+              <div class="row-hint">Только для окна Инкогнито: единые заголовки Client Hints (Sec-CH-UA*), язык запросов en-US,en;q=0.9 и letterboxing — область страницы округляется вниз до кратных 100×100 px и центрируется, чтобы скрыть точное разрешение экрана. Строгий режим может нарушать работу отдельных сайтов: сайты на английском вместо вашего языка, поля по краям страницы, неверная вёрстка или отказ в доступе</div>
+            </div>
+            <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Защита от цифрового отпечатка в Инкогнито" data-toggle="incognitoFingerprintProtection"></button>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Открывать Инкогнито в отдельном окне</div>
+              <div class="row-hint">Включено: Ctrl+Shift+N открывает отдельное окно Инкогнито рядом с обычным. Выключено: режим переключается в текущем окне, обычные вкладки возвращаются при выходе из Инкогнито</div>
+            </div>
+            <button type="button" class="switch" role="switch" aria-checked="true" aria-label="Открывать Инкогнито в отдельном окне" data-toggle="incognitoNewWindow"></button>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Подсказки поисковика</div>
+              <div class="row-hint">Отправлять вводимый текст поисковику для подсказок в адресной строке (в Инкогнито отключено)</div>
+            </div>
+            <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Подсказки поисковика" data-toggle="searchSuggest"></button>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Доверенные источники в ИИ-обзоре</div>
+              <div class="row-hint">В «Обзоре от ИИ» Google оставлять только доверенные источники</div>
+            </div>
+            <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Доверенные источники в ИИ-обзоре" data-toggle="trustedSources"></button>
+          </div>
+        </div>
+
+        <h3>DNS-over-HTTPS</h3>
+        <div class="card">
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Режим DoH</div>
+              <div class="row-hint">«Автоматический» — DoH, при сбое откат на системный DNS. «Строгий» — только DoH без отката: если сервер недоступен, сайты не откроются. Применяется сразу</div>
+            </div>
+            <select class="field" id="sel-doh-mode" aria-label="Режим DNS-over-HTTPS">
+              <option value="automatic">Автоматический</option>
+              <option value="secure">Строгий (без отката)</option>
+              <option value="off">Выключен</option>
+            </select>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Провайдер DoH</div>
+              <div class="row-hint">Сервер, которому отправляются DNS-запросы</div>
+            </div>
+            <select class="field" id="sel-doh-provider" aria-label="Провайдер DNS-over-HTTPS">
+              <option value="cloudflare">Cloudflare</option>
+              <option value="quad9">Quad9</option>
+              <option value="adguard">AdGuard DNS</option>
+              <option value="custom">Свой адрес</option>
+            </select>
+          </div>
+          <div id="doh-custom-wrap" hidden>
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Свой адрес DoH</div>
+                <div class="row-hint">Только https://, например <code>https://dns.example.com/dns-query</code></div>
+                <div class="row-hint" id="doh-url-error" role="alert"></div>
+              </div>
+              <input type="url" class="field" id="inp-doh-url" placeholder="https://dns.example.com/dns-query" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Адрес DoH-сервера">
+              <button type="button" class="btn" id="btn-doh-save">Применить</button>
+            </div>
+          </div>
+        </div>
+
+        <h3>Свои правила фильтрации</h3>
+        <div class="card card-pad">
+          <p class="row-hint">Поддерживаются сетевые правила и исключения (синтаксис AdGuard / uBlock / ABP), например <code>||example.com^</code> и <code>@@||site.com^</code>. Косметические правила (<code>##</code>, <code>#@#</code>) применяются, пока включена косметическая фильтрация. По одному правилу в строке, комментарии начинаются с <code>!</code>.</p>
+          <p class="note" id="adblock-off-note" hidden>AdBlock выключен: правила сохранятся и применятся при включении.</p>
+          <textarea id="rules" class="rules" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Содержимое custom-filters.txt" placeholder="||example.com^&#10;@@||site.com^"></textarea>
+          <div class="rules-bar">
+            <span class="row-hint" id="rules-meta"></span>
+            <button type="button" class="btn primary" id="btn-save-rules" disabled>Сохранить и применить</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="permissions" data-section="permissions" hidden>
+        <h2>Разрешения сайтов</h2>
+        <p class="row-hint">Сохранённые решения по камере и микрофону. После сброса сайт спросит снова.</p>
+        <div class="card" id="perm-list" hidden></div>
+        <p class="row-hint" id="perm-empty" hidden>Сохранённых решений нет.</p>
+      </section>
+
+      <section class="section" id="data" data-section="data" hidden>
+        <h2>Очистка данных</h2>
+        <p class="note" id="incognito-data-note" hidden>
+          В Инкогнито «Кэш» и «Cookies и данные сайтов» очищаются только для текущего инкогнито-сеанса
+          (он и так удалится при выходе). «История» недоступна: в Инкогнито она не ведётся, а историю обычного режима
+          отсюда не стереть — выйдите из Инкогнито и очистите её там.
+        </p>
+        <div class="card">
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Кэш</div>
+              <div class="row-hint">Файлы и изображения сайтов. Входы в аккаунты сохранятся</div>
+            </div>
+            <span class="row-hint" data-clear-status="cache" role="status"></span>
+            <button type="button" class="btn" data-clear="cache">Очистить</button>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">История</div>
+              <div class="row-hint">Список посещённых сайтов (подсказки в адресной строке)</div>
+            </div>
+            <span class="row-hint" data-clear-status="history" role="status"></span>
+            <button type="button" class="btn" data-clear="history">Очистить</button>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Cookies и данные сайтов</div>
+              <div class="row-hint">Cookies, localStorage, IndexedDB, service workers. Вы выйдете из аккаунтов на сайтах</div>
+            </div>
+            <span class="row-hint" data-clear-status="site-data" role="status"></span>
+            <button type="button" class="btn" data-clear="site-data">Очистить</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="bookmarks" data-section="bookmarks" hidden>
+        <h2>Закладки</h2>
+        <div class="card">
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Импорт</div>
+              <div class="row-hint">HTML-файл закладок из Chrome, Edge или Firefox. Дубликаты пропускаются</div>
+            </div>
+            <button type="button" class="btn" id="btn-bm-import">Импортировать из HTML</button>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Экспорт</div>
+              <div class="row-hint">Сохранить все закладки в HTML-файл</div>
+            </div>
+            <button type="button" class="btn" id="btn-bm-export">Экспортировать в HTML</button>
+          </div>
+        </div>
+        <p class="row-hint" id="bm-status" role="status"></p>
+        <p class="note" id="incognito-bm-note" hidden>В Инкогнито импорт и экспорт закладок недоступны: закладки обычного режима здесь не показываются и не меняются.</p>
+      </section>
+      <section class="section" id="network" data-section="network" hidden>
+        <h2>Сеть и Прокси</h2>
+        <div class="card">
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Режим прокси</div>
+              <div class="row-hint">«Системный» — настройки ОС, «Напрямую» — без прокси, «Ручной» — свой сервер. Применяется сразу, открытые соединения переустанавливаются</div>
+            </div>
+            <select class="field" id="sel-proxy-mode" aria-label="Режим прокси">
+              <option value="system">Системный</option>
+              <option value="direct">Напрямую (без прокси)</option>
+              <option value="manual">Ручной</option>
+            </select>
+          </div>
+          <div id="proxy-manual-wrap" hidden>
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Протокол</div>
+              </div>
+              <select class="field" id="sel-proxy-protocol" aria-label="Протокол прокси">
+                <option value="http">HTTP</option>
+                <option value="socks5">SOCKS5</option>
+              </select>
+            </div>
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Хост</div>
+                <div class="row-hint">Имя или IP-адрес сервера, например <code>proxy.example.com</code></div>
+              </div>
+              <input type="text" class="field" id="inp-proxy-host" placeholder="proxy.example.com" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Хост прокси">
+            </div>
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Порт</div>
+              </div>
+              <input type="text" class="field" id="inp-proxy-port" inputmode="numeric" maxlength="5" placeholder="8080" spellcheck="false" autocomplete="off" aria-label="Порт прокси">
+            </div>
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Не использовать прокси для</div>
+                <div class="row-hint">Через запятую: <code>localhost,127.0.0.1,*.example.com,10.0.0.0/8</code>. Можно оставить пустым</div>
+              </div>
+              <input type="text" class="field" id="inp-proxy-bypass" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Список обхода прокси">
+            </div>
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Применять только в окнах Инкогнито</div>
+                <div class="row-hint">Обычный режим остаётся на системном соединении, Инкогнито идёт через указанный прокси</div>
+              </div>
+              <input type="checkbox" id="chk-proxy-incognito" aria-label="Применять прокси только в окнах Инкогнито">
+            </div>
+            <div class="row">
+              <div class="row-text">
+                <div class="row-hint" id="proxy-error" role="alert"></div>
+                <div class="row-hint">Если прокси требует логин и пароль, браузер запросит их при первом обращении (для HTTP-прокси). SOCKS5 с авторизацией Chromium не поддерживает</div>
+              </div>
+              <button type="button" class="btn primary" id="btn-proxy-save">Применить</button>
+            </div>
+          </div>
+        </div>
+        <p class="row-hint" id="proxy-status" role="status"></p>
+      </section>
+
+      <section class="section" id="passwords" data-section="passwords" hidden>
+        <h2>Пароли и автозаполнение</h2>
+        <p class="note" id="pw-blocked-note" role="status" hidden>В Инкогнито менеджер паролей недоступен: сохранённые пароли обычного режима здесь не показываются и не меняются.</p>
+        <p class="note" id="pw-unavailable-note" role="alert" hidden>Безопасное хранилище ОС недоступно (Windows DPAPI / системная связка ключей). Новые пароли не сохраняются, а показать сохранённые может не получиться.</p>
+        <div class="card">
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Предлагать сохранение паролей</div>
+              <div class="row-hint">Пароли шифруются средствами ОС и хранятся только на этом устройстве</div>
+            </div>
+            <button type="button" class="switch" role="switch" aria-checked="true" aria-label="Предлагать сохранение паролей" data-toggle="offerSavePasswords"></button>
+          </div>
+        </div>
+
+        <h3>Сохранённые пароли</h3>
+        <div class="pw-toolbar">
+          <input type="search" class="field" id="pw-search" placeholder="Поиск по сайту или логину" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Поиск по сайту или логину">
+          <span class="pw-count" id="pw-count" role="status"></span>
+          <button type="button" class="btn" id="btn-pw-import" title="Chrome → Пароли → Экспорт паролей (.csv)">Импорт из CSV (Chrome)</button>
+          <button type="button" class="btn danger" id="btn-pw-clear" disabled>Удалить все</button>
+        </div>
+        <p class="row-hint" id="pw-import-status" role="status" hidden></p>
+        <div class="card" id="pw-list" hidden></div>
+        <p class="row-hint" id="pw-empty" role="status" hidden></p>
+      </section>
+
+      <section class="section" id="extensions" data-section="extensions" hidden>
+        <h2>Расширения</h2>
+        <p class="note">Поддерживаются распакованные расширения Chrome (папка с manifest.json). Доступ к файлам file:// им отключён. Часть API Chrome в Electron не реализована, поэтому некоторые расширения могут работать не полностью.</p>
+        <div class="card">
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Добавить расширение</div>
+              <div class="row-hint">Выберите папку распакованного расширения. Оно будет загружаться при каждом запуске</div>
+            </div>
+            <button type="button" class="btn" id="btn-ext-add">Выбрать папку…</button>
+          </div>
+        </div>
+        <div class="card" id="ext-list" hidden></div>
+        <p class="row-hint" id="ext-empty" role="status" hidden>Расширения не добавлены.</p>
+      </section>
+
+      <section class="section" id="about" data-section="about" hidden>
+        <h2>Обновления</h2>
+        <div class="card">
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Версия <span id="upd-current"></span></div>
+              <div class="row-hint" id="upd-status" role="status">Нажмите «Проверить обновления»</div>
+            </div>
+            <button type="button" class="btn" id="btn-upd-check">Проверить обновления</button>
+            <button type="button" class="btn primary" id="btn-upd-download" hidden>Скачать</button>
+            <button type="button" class="btn primary" id="btn-upd-install" hidden>Перезапустить и установить</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <p class="fatal" id="fatal" hidden>Страница настроек недоступна: внутренний API не подключён.</p>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

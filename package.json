@@ -1,0 +1,79 @@
+{
+  "name": "deffi-browser",
+  "version": "1.0.0",
+  "author": "deffi",
+  "description": "DEFFI Browser",
+  "main": "main/index.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64 --publish never",
+    "dist:dir": "electron-builder --win --x64 --dir",
+    "test": "node --test \"tests/*.test.js\""
+  },
+  "devDependencies": {
+    "@electron/fuses": "^1.8.0",
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0"
+  },
+  "dependencies": {
+    "@ghostery/adblocker-electron": "^2.20.3",
+    "electron-updater": "^6.8.11",
+    "tldts": "^7.5.5"
+  },
+  "build": {
+    "appId": "com.deffi.DEFFI",
+    "productName": "DEFFI Browser",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main/**/*",
+      "preload/**/*",
+      "renderer/**/*",
+      "build/icon.png",
+      "build/icon.ico",
+      "package.json"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "main/adblockWorker.js",
+      "node_modules/@ghostery/**",
+      "node_modules/@remusao/**",
+      "node_modules/tldts*/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-Setup-${version}.exe",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}.exe"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "ВАШ_АККАУНТ",
+      "repo": "ВАШ_РЕПО"
+    },
+    "afterPack": "build/fuses.js"
+  }
+}

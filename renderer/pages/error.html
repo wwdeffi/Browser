@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Не удалось открыть страницу</title>
+  <link rel="stylesheet" href="browser://styles/tokens.css">
+  <script src="browser://styles/chromeTheme.js"></script>
+  <link rel="stylesheet" href="browser://error/error.css">
+  <script src="browser://error/error.js" defer></script>
+</head>
+<body>
+  <main class="card">
+    <div class="icon-badge" id="icon-badge" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M12 8v4.5M12 16h.01"/>
+      </svg>
+    </div>
+
+    <h1 id="error-title">Не удалось загрузить страницу</h1>
+    <p class="subtitle" id="error-subtitle">При попытке открыть этот адрес произошла сетевая ошибка.</p>
+
+    <div class="url-box" id="error-url"></div>
+    <div class="cert-fp" id="cert-fp" hidden></div>
+
+    <ul class="tips" id="error-tips"></ul>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="btn-retry" type="button">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13.2 8a5.2 5.2 0 1 1-1.4-3.5"/>
+          <path d="M13.2 3.2v2.9h-2.9"/>
+        </svg>
+        Повторить попытку
+      </button>
+      <button class="btn btn-secondary" id="btn-back" type="button">Назад</button>
+      <button class="btn btn-primary" id="btn-cert-back" type="button" hidden>Вернуться назад</button>
+      <button class="btn btn-danger" id="btn-cert-proceed" type="button" hidden>Продолжить (разовое исключение)</button>
+      <button class="btn btn-primary" id="btn-https-back" type="button" hidden>Вернуться назад</button>
+      <button class="btn btn-danger" id="btn-https-proceed" type="button" hidden>Всё равно перейти (небезопасно)</button>
+    </div>
+
+    <div class="error-meta" id="error-code"></div>
+  </main>
+</body>
+</html>

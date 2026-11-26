@@ -1,0 +1,412 @@
+/* ==========================================================================
+   ДИЗАЙН-ТОКЕНЫ БРАУЗЕРА (Obsidian Glass + 8 Chrome Themes)
+   ВАЖНО: --tabbar-height (40px) + --toolbar-height (42px) = UI_HEIGHT (82px)
+   ========================================================================== */
+
+:root {
+  /* Типографика */
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "Cascadia Code", Consolas, monospace;
+  --font-size-ui: 12.5px;
+  --font-size-url: 13px;
+
+  /* Размеры (НЕ МЕНЯТЬ сумму 40 + 42 = 82px) */
+  --tabbar-height: 40px;
+  --toolbar-height: 42px;
+  --findbar-height: 38px; /* панель поиска #findbar; = FIND_BAR_HEIGHT в main/constants.js (в UI_HEIGHT не входит) */
+  --tab-height: 30px;
+  --tab-max-width: 216px;
+  --tab-min-width: 68px;
+  --tab-pinned-width: 36px;
+  --url-height: 30px;
+  --btn-size: 28px;
+  --win-btn-width: 44px;
+  /* Попап омнибокса: должны совпадать с OMNIBOX_ROW_HEIGHT / OMNIBOX_PADDING / OMNIBOX_GAP в main/constants.js */
+  --omnibox-row-height: 36px;
+  --omnibox-padding: 6px;
+  --omnibox-gap: 4px;
+
+  /* Скругления */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* Анимации */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 130ms;
+  --duration-normal: 240ms;
+
+  /* Палитра по умолчанию: Cyber Blue (Тёмная) */
+  --bg-frame: #070a14;
+  --bg-toolbar: #070a14;
+  --bg-surface: rgba(24, 34, 62, 0.56);
+  --bg-surface-hover: rgba(38, 54, 96, 0.72);
+  --bg-tab-active: #10172b;
+  --bg-url: #0c1222;
+  --bg-url-focus: #121a30;
+  --bg-page: #070a14;
+  --bg-card: #0e1424;
+
+  --border-subtle: rgba(148, 197, 255, 0.1);
+  --border-strong: rgba(56, 189, 248, 0.28);
+  --shadow-tab: 0 4px 14px rgba(0, 0, 0, 0.45);
+
+  --text-primary: #eef4ff;
+  --text-secondary: #8ea0c2;
+  --text-muted: #566685;
+
+  --accent: #38bdf8;
+  --accent-2: #6366f1;
+  --accent-hover: #7dd3fc;
+  --accent-soft: rgba(56, 189, 248, 0.16);
+  --accent-ring: rgba(56, 189, 248, 0.28);
+  --accent-glow: rgba(56, 189, 248, 0.38);
+
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #f43f5e;
+  --danger-hover: #e11d48;
+}
+
+/* ==================== Тёмные цветовые темы рамки ==================== */
+
+:root[data-chrome-theme="nebula-violet"] {
+  --bg-frame: #090612;
+  --bg-toolbar: #090612;
+  --bg-surface: rgba(44, 24, 72, 0.54);
+  --bg-surface-hover: rgba(65, 36, 106, 0.7);
+  --bg-tab-active: #17102a;
+  --bg-url: #110c20;
+  --bg-url-focus: #18112e;
+  --border-subtle: rgba(192, 132, 252, 0.12);
+  --border-strong: rgba(192, 132, 252, 0.32);
+  --accent: #c084fc;
+  --accent-2: #f472b6;
+  --accent-hover: #d8b4fe;
+  --accent-soft: rgba(192, 132, 252, 0.17);
+  --accent-ring: rgba(192, 132, 252, 0.28);
+  --accent-glow: rgba(192, 132, 252, 0.4);
+}
+
+:root[data-chrome-theme="obsidian-chrome"] {
+  --bg-frame: #08090d;
+  --bg-toolbar: #08090d;
+  --bg-surface: rgba(30, 34, 46, 0.56);
+  --bg-surface-hover: rgba(46, 52, 68, 0.72);
+  --bg-tab-active: #161821;
+  --bg-url: #101219;
+  --bg-url-focus: #161923;
+  --border-subtle: rgba(226, 232, 240, 0.09);
+  --border-strong: rgba(226, 232, 240, 0.22);
+  --accent: #e2e8f0;
+  --accent-2: #818cf8;
+  --accent-hover: #ffffff;
+  --accent-soft: rgba(226, 232, 240, 0.13);
+  --accent-ring: rgba(148, 163, 184, 0.28);
+  --accent-glow: rgba(203, 213, 225, 0.32);
+}
+
+:root[data-chrome-theme="crimson-eclipse"] {
+  --bg-frame: #0c0608;
+  --bg-toolbar: #0c0608;
+  --bg-surface: rgba(56, 20, 30, 0.52);
+  --bg-surface-hover: rgba(84, 28, 44, 0.68);
+  --bg-tab-active: #1d0e13;
+  --bg-url: #150a0e;
+  --bg-url-focus: #200f15;
+  --border-subtle: rgba(251, 113, 133, 0.12);
+  --border-strong: rgba(251, 113, 133, 0.32);
+  --accent: #fb7185;
+  --accent-2: #ef4444;
+  --accent-hover: #fda4af;
+  --accent-soft: rgba(251, 113, 133, 0.17);
+  --accent-ring: rgba(244, 63, 94, 0.28);
+  --accent-glow: rgba(244, 63, 94, 0.42);
+}
+
+:root[data-chrome-theme="aurora-emerald"] {
+  --bg-frame: #050c0b;
+  --bg-toolbar: #050c0b;
+  --bg-surface: rgba(16, 48, 42, 0.54);
+  --bg-surface-hover: rgba(24, 70, 62, 0.7);
+  --bg-tab-active: #0d1f1d;
+  --bg-url: #091615;
+  --bg-url-focus: #0f2321;
+  --border-subtle: rgba(52, 211, 153, 0.11);
+  --border-strong: rgba(52, 211, 153, 0.3);
+  --accent: #34d399;
+  --accent-2: #22d3ee;
+  --accent-hover: #6ee7b7;
+  --accent-soft: rgba(52, 211, 153, 0.16);
+  --accent-ring: rgba(52, 211, 153, 0.28);
+  --accent-glow: rgba(52, 211, 153, 0.38);
+}
+
+:root[data-chrome-theme="tokyo-synth"] {
+  --bg-frame: #0c0713;
+  --bg-toolbar: #0c0713;
+  --bg-surface: rgba(52, 22, 66, 0.54);
+  --bg-surface-hover: rgba(78, 32, 96, 0.7);
+  --bg-tab-active: #1c1028;
+  --bg-url: #140b1e;
+  --bg-url-focus: #1f112d;
+  --border-subtle: rgba(244, 114, 182, 0.13);
+  --border-strong: rgba(244, 114, 182, 0.34);
+  --accent: #f472b6;
+  --accent-2: #38bdf8;
+  --accent-hover: #f9a8d4;
+  --accent-soft: rgba(244, 114, 182, 0.17);
+  --accent-ring: rgba(244, 114, 182, 0.3);
+  --accent-glow: rgba(244, 114, 182, 0.42);
+}
+
+:root[data-chrome-theme="sakura-midnight"] {
+  --bg-frame: #0c0811;
+  --bg-toolbar: #0c0811;
+  --bg-surface: rgba(50, 26, 56, 0.54);
+  --bg-surface-hover: rgba(72, 38, 80, 0.68);
+  --bg-tab-active: #1b1222;
+  --bg-url: #140d1a;
+  --bg-url-focus: #1f1428;
+  --border-subtle: rgba(249, 168, 212, 0.12);
+  --border-strong: rgba(249, 168, 212, 0.3);
+  --accent: #f9a8d4;
+  --accent-2: #c084fc;
+  --accent-hover: #fbcfe8;
+  --accent-soft: rgba(249, 168, 212, 0.16);
+  --accent-ring: rgba(249, 168, 212, 0.28);
+  --accent-glow: rgba(249, 168, 212, 0.38);
+}
+
+:root[data-chrome-theme="solar-gold"] {
+  --bg-frame: #0b0a07;
+  --bg-toolbar: #0b0a07;
+  --bg-surface: rgba(48, 38, 20, 0.54);
+  --bg-surface-hover: rgba(72, 56, 28, 0.7);
+  --bg-tab-active: #1a160e;
+  --bg-url: #13100a;
+  --bg-url-focus: #1d180f;
+  --border-subtle: rgba(251, 191, 36, 0.12);
+  --border-strong: rgba(251, 191, 36, 0.32);
+  --accent: #fbbf24;
+  --accent-2: #f97316;
+  --accent-hover: #fcd34d;
+  --accent-soft: rgba(251, 191, 36, 0.16);
+  --accent-ring: rgba(251, 191, 36, 0.28);
+  --accent-glow: rgba(251, 191, 36, 0.36);
+}
+
+:root[data-chrome-theme="silver-cosmos"] {
+  --bg-frame: #050506;
+  --bg-toolbar: #050506;
+  --bg-surface: rgba(58, 60, 68, 0.52);
+  --bg-surface-hover: rgba(88, 92, 102, 0.66);
+  --bg-tab-active: #131418;
+  --bg-url: #0d0e11;
+  --bg-url-focus: #15161a;
+  --border-subtle: rgba(226, 232, 240, 0.10);
+  --border-strong: rgba(226, 232, 240, 0.30);
+  --accent: #e5e7eb;
+  --accent-2: #94a3b8;
+  --accent-hover: #ffffff;
+  --accent-soft: rgba(229, 231, 235, 0.14);
+  --accent-ring: rgba(229, 231, 235, 0.26);
+  --accent-glow: rgba(229, 231, 235, 0.34);
+}
+
+:root[data-chrome-theme="aurora-voxel"] {
+  --bg-frame: #07061a;
+  --bg-toolbar: #07061a;
+  --bg-surface: rgba(40, 34, 84, 0.5);
+  --bg-surface-hover: rgba(64, 54, 122, 0.66);
+  --bg-tab-active: #14123a;
+  --bg-url: #0e0c2a;
+  --bg-url-focus: #17143f;
+  --border-subtle: rgba(167, 139, 250, 0.14);
+  --border-strong: rgba(167, 139, 250, 0.34);
+  --accent: #a78bfa;
+  --accent-2: #2dd4bf;
+  --accent-hover: #c4b5fd;
+  --accent-soft: rgba(167, 139, 250, 0.17);
+  --accent-ring: rgba(167, 139, 250, 0.28);
+  --accent-glow: rgba(167, 139, 250, 0.4);
+}
+
+:root[data-chrome-theme="topo-noir"] {
+  --bg-frame: #000000;
+  --bg-toolbar: #000000;
+  --bg-surface: rgba(48, 48, 48, 0.55);
+  --bg-surface-hover: rgba(78, 78, 78, 0.66);
+  --bg-tab-active: #0f0f0f;
+  --bg-url: #080808;
+  --bg-url-focus: #111111;
+  --border-subtle: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.32);
+  --accent: #f5f5f5;
+  --accent-2: #a3a3a3;
+  --accent-hover: #ffffff;
+  --accent-soft: rgba(255, 255, 255, 0.12);
+  --accent-ring: rgba(255, 255, 255, 0.24);
+  --accent-glow: rgba(255, 255, 255, 0.3);
+}
+
+:root[data-chrome-theme="katana-noir"] {
+  --bg-frame: #030406;
+  --bg-toolbar: #030406;
+  --bg-surface: rgba(40, 44, 54, 0.5);
+  --bg-surface-hover: rgba(66, 72, 88, 0.66);
+  --bg-tab-active: #0e1015;
+  --bg-url: #090b0f;
+  --bg-url-focus: #12151b;
+  --border-subtle: rgba(200, 215, 235, 0.11);
+  --border-strong: rgba(200, 215, 235, 0.30);
+  --accent: #f1f5f9;
+  --accent-2: #7c8da6;
+  --accent-hover: #ffffff;
+  --accent-soft: rgba(226, 236, 248, 0.13);
+  --accent-ring: rgba(226, 236, 248, 0.26);
+  --accent-glow: rgba(226, 236, 248, 0.36);
+}
+
+/* ==================== Светлая тема рамки ==================== */
+
+:root[data-theme="light"] {
+  --bg-frame: #e8edf6;
+  --bg-toolbar: #e8edf6;
+  --bg-surface: rgba(203, 213, 232, 0.55);
+  --bg-surface-hover: rgba(186, 200, 224, 0.72);
+  --bg-tab-active: #ffffff;
+  --bg-url: #f5f7fc;
+  --bg-url-focus: #ffffff;
+  --bg-page: #f4f6fb;
+  --bg-card: #ffffff;
+
+  --border-subtle: rgba(15, 23, 42, 0.08);
+  --border-strong: rgba(15, 23, 42, 0.18);
+  --shadow-tab: 0 2px 10px rgba(15, 23, 42, 0.08);
+
+  --text-primary: #141824;
+  --text-secondary: #525b72;
+  --text-muted: #848da6;
+
+  --accent: #4f46e5;
+  --accent-2: #0ea5e9;
+  --accent-hover: #4338ca;
+  --accent-soft: rgba(79, 70, 229, 0.12);
+  --accent-ring: rgba(79, 70, 229, 0.22);
+  --accent-glow: rgba(79, 70, 229, 0.25);
+
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #e11d48;
+  --danger-hover: #be123c;
+}
+
+:root[data-theme="light"][data-chrome-theme="nebula-violet"] {
+  --bg-frame: #ede8f6;
+  --bg-toolbar: #ede8f6;
+  --accent: #9333ea;
+  --accent-2: #ec4899;
+  --accent-ring: rgba(147, 51, 234, 0.22);
+}
+
+:root[data-theme="light"][data-chrome-theme="crimson-eclipse"] {
+  --bg-frame: #f5eaed;
+  --bg-toolbar: #f5eaed;
+  --accent: #e11d48;
+  --accent-2: #f97316;
+  --accent-ring: rgba(225, 29, 72, 0.22);
+}
+
+:root[data-theme="light"][data-chrome-theme="aurora-emerald"] {
+  --bg-frame: #e6f3ef;
+  --bg-toolbar: #e6f3ef;
+  --accent: #059669;
+  --accent-2: #0891b2;
+  --accent-ring: rgba(5, 150, 105, 0.22);
+}
+
+:root[data-theme="light"][data-chrome-theme="tokyo-synth"],
+:root[data-theme="light"][data-chrome-theme="sakura-midnight"] {
+  --bg-frame: #f4eaf2;
+  --bg-toolbar: #f4eaf2;
+  --accent: #db2777;
+  --accent-2: #8b5cf6;
+  --accent-ring: rgba(219, 39, 119, 0.22);
+}
+
+:root[data-theme="light"][data-chrome-theme="solar-gold"] {
+  --bg-frame: #f4efe4;
+  --bg-toolbar: #f4efe4;
+  --accent: #d97706;
+  --accent-2: #ea580c;
+  --accent-ring: rgba(217, 119, 6, 0.22);
+}
+
+:root[data-theme="light"][data-chrome-theme="silver-cosmos"] {
+  --bg-frame: #eceef1;
+  --bg-toolbar: #eceef1;
+  --accent: #475569;
+  --accent-2: #64748b;
+  --accent-ring: rgba(71, 85, 105, 0.22);
+}
+
+:root[data-theme="light"][data-chrome-theme="aurora-voxel"] {
+  --bg-frame: #efecfb;
+  --bg-toolbar: #efecfb;
+  --accent: #7c3aed;
+  --accent-2: #0d9488;
+  --accent-ring: rgba(124, 58, 237, 0.22);
+}
+
+:root[data-theme="light"][data-chrome-theme="topo-noir"] {
+  --bg-frame: #efefef;
+  --bg-toolbar: #efefef;
+  --accent: #262626;
+  --accent-2: #525252;
+  --accent-ring: rgba(38, 38, 38, 0.2);
+}
+
+:root[data-theme="light"][data-chrome-theme="katana-noir"] {
+  --bg-frame: #eef1f5;
+  --bg-toolbar: #eef1f5;
+  --accent: #334155;
+  --accent-2: #64748b;
+  --accent-ring: rgba(51, 65, 85, 0.22);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg-frame: #e8edf6;
+    --bg-toolbar: #e8edf6;
+    --bg-surface: rgba(203, 213, 232, 0.55);
+    --bg-surface-hover: rgba(186, 200, 224, 0.72);
+    --bg-tab-active: #ffffff;
+    --bg-url: #f5f7fc;
+    --bg-url-focus: #ffffff;
+    --bg-page: #f4f6fb;
+    --bg-card: #ffffff;
+
+    --border-subtle: rgba(15, 23, 42, 0.08);
+    --border-strong: rgba(15, 23, 42, 0.18);
+    --shadow-tab: 0 2px 10px rgba(15, 23, 42, 0.08);
+
+    --text-primary: #141824;
+    --text-secondary: #525b72;
+    --text-muted: #848da6;
+
+    --accent: #4f46e5;
+    --accent-2: #0ea5e9;
+    --accent-hover: #4338ca;
+    --accent-soft: rgba(79, 70, 229, 0.12);
+    --accent-ring: rgba(79, 70, 229, 0.22);
+    --accent-glow: rgba(79, 70, 229, 0.25);
+
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #e11d48;
+    --danger-hover: #be123c;
+  }
+}

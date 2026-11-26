@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Загрузки</title>
+  <link rel="stylesheet" href="browser://styles/tokens.css">
+  <script src="browser://styles/chromeTheme.js"></script>
+  <link rel="stylesheet" href="browser://downloads/downloads.css">
+  <script src="browser://downloads/downloads.js" defer></script>
+</head>
+<body>
+  <div class="shell" id="shell">
+    <header class="top">
+      <div class="top-title">
+        <h1>Загрузки</h1>
+        <p class="summary" id="summary" aria-live="polite"></p>
+      </div>
+      <div class="top-tools">
+        <input type="search" class="field search" id="search" placeholder="Поиск по имени файла" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Поиск по имени файла" maxlength="200">
+        <button type="button" class="btn" id="btn-folder">Открыть папку загрузок</button>
+        <button type="button" class="btn danger" id="btn-clear" disabled>Очистить историю</button>
+      </div>
+    </header>
+
+    <p class="note" id="incognito-notice" role="status" hidden>
+      <strong>Режим Инкогнито.</strong> Здесь только загрузки текущего инкогнито-сеанса. Они не сохраняются на диск
+      и пропадут при выходе из режима. Скачанные файлы останутся в папке загрузок.
+    </p>
+
+    <main class="content">
+      <ul class="list" id="list" aria-label="Список загрузок"></ul>
+      <div class="empty" id="empty" hidden>
+        <div class="empty-title" id="empty-title"></div>
+        <div class="empty-hint" id="empty-hint"></div>
+      </div>
+    </main>
+  </div>
+  <p class="fatal" id="fatal" hidden>Страница загрузок недоступна: внутренний API не подключён.</p>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark" data-chrome-theme="cyber-blue">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:;">
+  <title>Меню</title>
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/mainmenu.css">
+</head>
+<body>
+  <div id="panel" role="menu" aria-label="Меню браузера" tabindex="-1">
+    <div id="crumb" hidden>
+      <button id="crumb-back" type="button" tabindex="-1" aria-label="Назад">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.2 3.4L5.6 8l4.6 4.6"/></svg>
+      </button>
+      <span id="crumb-title"></span>
+    </div>
+    <div id="list"></div>
+  </div>
+  <script src="js/mainmenu.js"></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Закладки</title>
+  <link rel="stylesheet" href="browser://styles/tokens.css">
+  <link rel="stylesheet" href="bookmarks.css">
+  <script src="browser://styles/chromeTheme.js"></script>
+  <script src="bookmarks.js" defer></script>
+</head>
+<body>
+  <div class="shell" id="app">
+    <aside class="nav" aria-label="Папки закладок">
+      <h1 class="nav-title">Закладки</h1>
+      <div class="tree" id="tree" role="tree"></div>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <label class="search">
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M14 14l4 4"/></svg>
+          <input id="search" class="field" type="search" maxlength="200" autocomplete="off" spellcheck="false" placeholder="Поиск по названию и адресу  ( / )" aria-label="Поиск по закладкам">
+        </label>
+        <button class="btn" id="btn-add-folder" type="button">Новая папка</button>
+        <button class="btn primary" id="btn-add-bookmark" type="button">Добавить закладку</button>
+      </header>
+
+      <nav class="crumbs" id="crumbs" aria-label="Путь"></nav>
+      <div class="note" id="note" hidden></div>
+
+      <section class="card list" id="list" role="list" aria-label="Содержимое папки"></section>
+      <p class="empty" id="empty" hidden></p>
+    </main>
+  </div>
+
+  <div class="fatal" id="fatal" hidden>Не удалось подключиться к браузеру: страница закладок доступна только внутри приложения.</div>
+
+  <div class="modal" id="modal" hidden>
+    <form class="dialog card" id="modal-form" role="dialog" aria-modal="true" aria-labelledby="modal-title" novalidate>
+      <h2 id="modal-title"></h2>
+      <p class="row-hint" id="modal-text" hidden></p>
+      <label class="fld" id="fld-title"><span>Название</span><input class="field" id="in-title" maxlength="300" autocomplete="off"></label>
+      <label class="fld" id="fld-url"><span>Адрес</span><input class="field" id="in-url" maxlength="2048" autocomplete="off" spellcheck="false" placeholder="site.com"></label>
+      <p class="form-error" id="modal-error" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn" id="modal-cancel" type="button">Отмена</button>
+        <button class="btn primary" id="modal-ok" type="submit">Сохранить</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
