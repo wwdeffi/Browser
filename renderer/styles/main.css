@@ -1296,8 +1296,24 @@ html[data-incognito='1'] #titlebar::after {
   background: var(--accent-soft);
 }
 
-#btn-gemini[hidden] {
+#btn-gemini[hidden],
+#btn-gemini-context[hidden] {
   display: none;
+}
+
+/* «Контекст вкладки»: идёт чтение — кнопка мягко мигает, готово — акцент, сбой — красный */
+#btn-gemini-context[data-state="busy"] {
+  color: var(--accent);
+  opacity: 0.6;
+}
+
+#btn-gemini-context[data-state="done"] {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+#btn-gemini-context[data-state="error"] {
+  color: #ff6b6b;
 }
 
 #gemini-divider {
