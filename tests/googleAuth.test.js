@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
+const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8').replace(/\r\n/g, '\n'); // на Windows git отдаёт CRLF
 
 // Достаём ptFirefoxMainWorld из preload и выполняем в «странице» с минимальными заглушками DOM
 function runFirefoxMask() {
