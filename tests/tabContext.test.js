@@ -129,3 +129,43 @@ test('GeminiPanel.insertText: без панели или без текста —
   assert.deepEqual(await p.insertText(''), { ok: false, reason: 'no-panel' });
   assert.ok(Date.now() - started < 200);
 });
+
+test('GeminiPanel.insertText: вставка работает, даже если в Electron нет clipboard.readHTML', async () => {
+  const calls = [];
+  const clipboard = {
+    readText: () => 'старый буфер',
+    writeText: (v) => calls.push(['writeText', v]),
+    write: (d) => calls.push(['write', d]),
+    clear: () => calls.push(['clear'])
+    // readHTML и readImage отсутствуют намеренно
+  };
+  // Заглушка electron из helpers отдаёт новый объект на каждый require, поэтому подменяем загрузчик модулей на время теста
+  const Module = require('module');
+  const prevLoad = Module._load;
+  Module._load = function (request, ...rest) {
+    if (request === 'electron') return { WebContentsView: class {}, clipboard };
+    return prevLoad.call(this, request, ...rest);
+  };
+  let Panel;
+  try {
+    delete require.cache[require.resolve('../main/geminiPanel')];
+    Panel = require('../main/geminiPanel').GeminiPanel;
+  } finally {
+    Module._load = prevLoad;
+    delete require.cache[require.resolve('../main/geminiPanel')]; // другим тестам — модуль с обычной заглушкой
+  }
+  const p = new Panel({ win: null, getSession: () => null });
+  let pasted = false;
+  p.view = {
+    getBounds: () => ({ width: 400, height: 800 }),
+    webContents: {
+      isDestroyed: () => false, getURL: () => 'https://gemini.google.com/app', focus() {},
+      executeJavaScriptInIsolatedWorld: async () => true, paste: () => { pasted = true; }
+    }
+  };
+  assert.deepEqual(await p.insertText('блок'), { ok: true });
+  assert.ok(pasted);
+  assert.deepEqual(calls[0], ['writeText', 'блок']);
+  await new Promise((r) => setTimeout(r, 700));
+  assert.deepEqual(calls[1], ['write', { text: 'старый буфер' }], 'прежний текст из буфера вернулся');
+});
