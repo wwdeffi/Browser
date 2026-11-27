@@ -19,6 +19,7 @@ const TabManager = require('./tabManager');
 const OmniboxPopup = require('./omniboxPopup');
 const MainMenuPopup = require('./mainMenuPopup');
 const { GeminiPanel, GEMINI_GAP } = require('./geminiPanel');
+const tabContext = require('./tabContext');
 const DownloadsPopup = require('./downloadsPopup');
 const { buildCustomTheme, sanitizeSeed } = require('./customTheme');
 const { setCustomTokens } = require('./searchTheme');
@@ -630,8 +631,50 @@ class WindowManager {
       available,
       open: available && st.open,
       width: available && st.open && this.gemini ? this.gemini.effectiveWidth(w) : 0,
-      gap: st.gap
+      gap: st.gap,
+      context: { ...(this._geminiContext || { busy: false, note: '', error: false }) }
     };
+  }
+
+  // Контекст текущей вкладки → поле ввода Gemini. Читаем активную вкладку (текст, таблицы, код, PDF),
+  // собираем блок и вставляем его в панель; вопрос пользователь дописывает сам
+  async attachTabContextToGemini() {
+    if (!this.gemini || !this.isGeminiAvailable()) return;
+    if (this._geminiContext && this._geminiContext.busy) return;
+    const setStatus = (patch, resetAfterMs) => {
+      this._geminiContext = { busy: false, note: '', error: false, ...patch };
+      clearTimeout(this._geminiContextTimer);
+      if (resetAfterMs) {
+        this._geminiContextTimer = setTimeout(() => {
+          this._geminiContext = { busy: false, note: '', error: false };
+          this.sendState();
+        }, resetAfterMs);
+      }
+      this.sendState();
+    };
+    const REASONS = {
+      'not-signed-in': 'Войдите в Google-аккаунт в панели Gemini и повторите.',
+      'no-input': 'Не нашёл поле ввода Gemini: дождитесь загрузки панели и повторите.',
+      'no-panel': 'Панель Gemini недоступна.',
+      'paste-failed': 'Не удалось вставить текст в Gemini.'
+    };
+
+    // Читаем вкладку ДО открытия панели: фокус и раскладка не должны менять «активную» страницу
+    const wc = this._getActiveWebContents();
+    setStatus({ busy: true, note: 'Читаю вкладку…' });
+    try {
+      const ctx = await tabContext.extractTabContext(wc);
+      if (!this.gemini.isOpen()) this.toggleGeminiPanel(true);
+      const res = await this.gemini.insertText(tabContext.buildContextBlock(ctx));
+      if (!res.ok) {
+        setStatus({ note: REASONS[res.reason] || 'Не удалось передать контекст в Gemini.', error: true }, 5000);
+        return;
+      }
+      const what = ctx.kind === 'pdf' ? 'PDF' : 'страница';
+      setStatus({ note: `Контекст добавлен: ${what} «${(ctx.title || ctx.url || '').slice(0, 60)}»` }, 3500);
+    } catch (err) {
+      setStatus({ note: tabContext.describeError(err), error: true }, 5000);
+    }
   }
 
   toggleGeminiPanel(force) {
@@ -1051,6 +1094,7 @@ class WindowManager {
         this.downloadsPopup = null;
       }
       clearTimeout(this._geminiWidthTimer);
+      clearTimeout(this._geminiContextTimer);
       if (this.gemini) {
         this.gemini.destroy();
         this.gemini = null;
@@ -1133,6 +1177,13 @@ class WindowManager {
     const shift = input.shift;
     const alt = input.alt;
     const code = input.code;
+
+    // Alt+Shift+G — отправить в Gemini контекст текущей вкладки
+    if (alt && shift && !ctrl && code === 'KeyG') {
+      event.preventDefault();
+      this.attachTabContextToGemini();
+      return;
+    }
 
     if (alt && !ctrl && !shift) {
       // Alt+G — панель Gemini, как в Chrome

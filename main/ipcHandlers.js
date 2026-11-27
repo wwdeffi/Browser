@@ -555,6 +555,7 @@ function registerIpcHandlers(registry, energySaver) {
   handleUi('ui:vertical-tabs-collapse', () => windowManager.toggleVerticalTabsCollapsed());
   handleUi('ui:gemini-toggle', () => windowManager.toggleGeminiPanel());
   handleUi('ui:gemini-reload', () => windowManager.reloadGeminiPanel());
+  handleUi('ui:gemini-context', () => windowManager.attachTabContextToGemini());
   handleUi('ui:gemini-resize', (width) => {
     if (typeof width === 'number' && Number.isFinite(width)) windowManager.resizeGeminiPanel(width);
   });

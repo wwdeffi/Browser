@@ -4,7 +4,7 @@
 // с gemini.google.com. Он работает в той же сессии, что и вкладки, поэтому вход в Google-аккаунт общий:
 // вошёл один раз во вкладке или в самой панели — и помощник уже под твоим аккаунтом.
 
-const { WebContentsView } = require('electron');
+const { WebContentsView, clipboard } = require('electron');
 
 const GEMINI_URL = 'https://gemini.google.com/app';
 const GEMINI_GAP = 6;            // зазор между страницей и панелью: в нём лежит разделитель #gemini-divider окна интерфейса
@@ -73,6 +73,27 @@ const TIDY_SCRIPT = `(() => {
 })();`;
 
 const TIDY_WORLD_ID = 1207; // отдельный изолированный мир для наших правок панели
+
+// Ставит курсор в конец поля ввода Gemini (редактор Quill внутри <rich-textarea>); true — поле найдено и в фокусе
+const FOCUS_EDITOR_SCRIPT = `(() => {
+  const cands = document.querySelectorAll('rich-textarea .ql-editor, rich-textarea [contenteditable="true"], div[contenteditable="true"][role="textbox"], [contenteditable="true"]');
+  for (const el of cands) {
+    const r = el.getBoundingClientRect();
+    if (r.width < 40 || r.height < 10) continue;
+    el.focus();
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    return true;
+  }
+  return false;
+})()`;
+
+const INSERT_WAIT_MS = 8000; // сколько ждём появления поля ввода (панель могла только что открыться)
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function isGeminiAppUrl(rawUrl) {
   try {
@@ -147,6 +168,44 @@ class GeminiPanel {
   reload() {
     const wc = this._wc();
     if (wc) wc.loadURL(GEMINI_URL);
+  }
+
+  // Кладёт текст в поле ввода Gemini (в конец уже набранного), не отправляя его: вопрос пользователь допишет сам.
+  // Вставка идёт как обычная — через буфер обмена, поэтому переносы строк и большие объёмы редактор переваривает штатно;
+  // прежнее содержимое буфера возвращаем на место. Результат: { ok: true } или { ok: false, reason }
+  async insertText(text) {
+    const wc = this._wc();
+    if (!wc || !text) return { ok: false, reason: 'no-panel' };
+
+    let focused = false;
+    const deadline = Date.now() + INSERT_WAIT_MS;
+    while (!focused && Date.now() < deadline) {
+      if (!this._wc()) return { ok: false, reason: 'no-panel' };
+      if (isGeminiAppUrl(wc.getURL())) {
+        focused = await wc.executeJavaScriptInIsolatedWorld(TIDY_WORLD_ID, [{ code: FOCUS_EDITOR_SCRIPT }]).catch(() => false);
+      }
+      if (!focused) await sleep(300);
+    }
+    if (!focused) return { ok: false, reason: isGeminiAppUrl(wc.getURL()) ? 'no-input' : 'not-signed-in' };
+
+    wc.focus();
+    const saved = { text: clipboard.readText(), html: clipboard.readHTML(), image: clipboard.readImage() };
+    try {
+      clipboard.writeText(String(text));
+      wc.paste();
+    } catch {
+      return { ok: false, reason: 'paste-failed' };
+    } finally {
+      // Вставка асинхронна: даём ей отработать и только потом возвращаем прежний буфер
+      setTimeout(() => {
+        try {
+          const data = { text: saved.text, html: saved.html };
+          if (saved.image && !saved.image.isEmpty()) data.image = saved.image;
+          clipboard.write(data);
+        } catch { /* буфер недоступен */ }
+      }, 600);
+    }
+    return { ok: true };
   }
 
   // rect — область панели в координатах окна; null — спрятать (закрыта, HTML-fullscreen, модалка интерфейса)
@@ -262,6 +321,7 @@ module.exports = {
   GEMINI_DEFAULT_WIDTH,
   isPanelUrl,
   clampWidth,
+  isGeminiAppUrl,
   shouldHideLabel,
   TIDY_SCRIPT
 };

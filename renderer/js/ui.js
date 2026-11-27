@@ -879,6 +879,7 @@
   // ---- Боковая панель Gemini: кнопка в тулбаре и разделитель в 6px-зазоре слева от панели ----
   const geminiBtn = document.getElementById('btn-gemini');
   const geminiDivider = document.getElementById('gemini-divider');
+  const geminiCtxBtn = document.getElementById('btn-gemini-context');
   let geminiDragging = false;
   let geminiRaf = 0;
   let geminiPending = null;
@@ -892,6 +893,13 @@
     geminiBtn.title = open ? 'Закрыть Gemini (Alt+G)' : 'Спросить Gemini (Alt+G)';
     geminiBtn.setAttribute('aria-label', geminiBtn.title);
     geminiDivider.hidden = !open;
+    // Кнопка «Контекст вкладки» нужна, только пока панель открыта; статус чтения/вставки приходит из main
+    const ctx = g.context || {};
+    geminiCtxBtn.hidden = !open;
+    geminiCtxBtn.disabled = Boolean(ctx.busy);
+    geminiCtxBtn.dataset.state = ctx.busy ? 'busy' : ctx.error ? 'error' : ctx.note ? 'done' : '';
+    geminiCtxBtn.title = ctx.note || 'Передать Gemini контекст вкладки (Alt+Shift+G)';
+    geminiCtxBtn.setAttribute('aria-label', geminiCtxBtn.title);
     if (!open) return;
     const bar = document.getElementById('findbar');
     const bmb = document.getElementById('bmbar');
@@ -910,6 +918,7 @@
   }
 
   geminiBtn.addEventListener('click', () => window.browser.toggleGemini());
+  geminiCtxBtn.addEventListener('click', () => window.browser.attachGeminiContext());
   geminiDivider.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
     geminiDragging = true;
