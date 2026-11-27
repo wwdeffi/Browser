@@ -80,14 +80,16 @@ function cleanUserAgent(app) {
     // между «(KHTML, like Gecko)» и «Chrome/…» стоит токен приложения под любым именем («DEFFIBrowser/1.0.0» и т.п.)
     .replace(/(\(KHTML, like Gecko\))\s+(?:(?!Chrome\/)\S+\s+)+(?=Chrome\/)/, '$1 ')
     .replace(/\s*Electron\/\S+/g, '')
-    .replace(/\s*(?:my-browser|deffi-browser)\/\S+/g, '');
+    .replace(/\s*(?:my-browser|deffi-browser)\/\S+/g, '')
+    // настоящий Chrome с версии 101 отдаёт в UA только мажорную версию: Chrome/158.0.0.0 (полный номер сборки выдаёт Electron)
+    .replace(/Chrome\/(\d+)\.\d+\.\d+\.\d+/, 'Chrome/$1.0.0.0');
 }
 
 // ---- Маскировка под Firefox: только для доменов авторизации Google ----
 const FIREFOX_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0';
 // true — на доменах входа Google подставлять Firefox-UA; false — везде один Chrome-UA (заголовки, navigator.userAgent и client hints совпадают).
 // Если вход в Google перестал работать, переключите значение и перезапустите браузер.
-const GOOGLE_FIREFOX_UA = true;
+const GOOGLE_FIREFOX_UA = false;
 const GOOGLE_AUTH_HOSTS = new Set(['accounts.youtube.com', 'myaccount.google.com']);
 // Только настоящие домены Google: com, ccTLD (de, fr…) и составные (co.uk, com.au); иначе accounts.google.com.evil.io тоже совпал бы
 const GOOGLE_AUTH_HOST_RE = /^accounts\.google\.(?:com|[a-z]{2}|(?:co|com)\.[a-z]{2})$/;
@@ -105,6 +107,23 @@ function isGoogleAuthRequest(details) {
   if (isGoogleAuthUrl(details.url)) return true;
   if (details.resourceType === 'mainFrame') return false;
   return isGoogleAuthUrl(safeGetUrl(details.webContents));
+}
+
+// Electron не Google Chrome: в Sec-CH-UA у него нет бренда «Google Chrome», а у настоящего Chrome он есть.
+// На страницах входа добавляем его (версия та же, что у Chromium), чтобы заголовок совпадал с User-Agent
+function addGoogleChromeBrand(value) {
+  const v = String(value);
+  if (/"Google Chrome"/.test(v)) return v;
+  return v.replace(/"Chromium";v="([^"]*)"/, (m, ver) => `${m}, "Google Chrome";v="${ver}"`);
+}
+
+function applyChromeBrandHeaders(headers) {
+  const out = {};
+  for (const [k, v] of Object.entries(headers)) {
+    const l = k.toLowerCase();
+    out[k] = (l === 'sec-ch-ua' || l === 'sec-ch-ua-full-version-list') ? addGoogleChromeBrand(v) : v;
+  }
+  return out;
 }
 
 function applyFirefoxHeaders(headers) {
@@ -613,7 +632,9 @@ function applyPrivacyHeaders(ses, { incognito = false } = {}) {
     if (incognito && getPrivacyFlags().incognitoFingerprintProtection) {
       out = normalizeFingerprintHeaders(headers);
     }
-    if (GOOGLE_FIREFOX_UA && isGoogleAuthRequest(details)) out = applyFirefoxHeaders(out); // строго последним
+    if (isGoogleAuthRequest(details)) {
+      out = GOOGLE_FIREFOX_UA ? applyFirefoxHeaders(out) : applyChromeBrandHeaders(out); // строго последним
+    }
     callback({ requestHeaders: out });
   });
 
@@ -1071,6 +1092,7 @@ module.exports = {
   FIREFOX_UA,
   GOOGLE_FIREFOX_UA,
   isGoogleAuthUrl,
+  addGoogleChromeBrand,
   listMediaPermissions,
   removeMediaPermission,
   getSitePermissionInfo,

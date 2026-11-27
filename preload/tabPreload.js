@@ -1075,6 +1075,95 @@ function ptFirefoxMainWorld(ua) {
     if ('chrome' in window) Object.defineProperty(window, 'chrome', { value: undefined, configurable: true });
   }
 
+  // Chrome-режим: у настоящего Chrome в window.chrome есть app, csi и loadTimes, а у Electron объект пустой или отсутствует
+  if (!ua) {
+    try {
+      let ch = window.chrome;
+      if (!ch || typeof ch !== 'object') {
+        ch = {};
+        Object.defineProperty(window, 'chrome', { value: ch, writable: true, configurable: true, enumerable: true });
+      }
+      const origin = () => { try { return (performance.timeOrigin || Date.now()) / 1000; } catch (e) { return Date.now() / 1000; } };
+      if (!ch.csi) {
+        ch.csi = mask({ csi() {
+          const o = origin();
+          return { onloadT: Date.now(), pageT: Date.now() - o * 1000, startE: Math.round(o * 1000), tran: 15 };
+        } }.csi, 'csi');
+      }
+      if (!ch.loadTimes) {
+        ch.loadTimes = mask({ loadTimes() {
+          const s = origin();
+          let proto = 'h2';
+          try { const nav = performance.getEntriesByType('navigation')[0]; if (nav && nav.nextHopProtocol) proto = nav.nextHopProtocol; } catch (e) { /* ignore */ }
+          return {
+            commitLoadTime: s + 0.1, connectionInfo: proto, finishDocumentLoadTime: s + 0.5, finishLoadTime: s + 0.6,
+            firstPaintAfterLoadTime: 0, firstPaintTime: s + 0.4, navigationType: 'Other', npnNegotiatedProtocol: proto,
+            requestTime: s, startLoadTime: s, wasAlternateProtocolAvailable: false,
+            wasFetchedViaSpdy: proto === 'h2' || proto === 'h3', wasNpnNegotiated: true
+          };
+        } }.loadTimes, 'loadTimes');
+      }
+      if (!ch.app) {
+        ch.app = {
+          isInstalled: false,
+          InstallState: { DISABLED: 'disabled', INSTALLED: 'installed', NOT_INSTALLED: 'not_installed' },
+          RunningState: { CANNOT_RUN: 'cannot_run', READY_TO_RUN: 'ready_to_run', RUNNING: 'running' },
+          getDetails: mask({ getDetails() { return null; } }.getDetails, 'getDetails'),
+          getIsInstalled: mask({ getIsInstalled() { return false; } }.getIsInstalled, 'getIsInstalled'),
+          installState: mask({ installState(cb) { if (typeof cb === 'function') cb('not_installed'); } }.installState, 'installState'),
+          runningState: mask({ runningState() { return 'cannot_run'; } }.runningState, 'runningState')
+        };
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  // Chrome-режим: у Electron в navigator.userAgentData.brands нет «Google Chrome» (у настоящего Chrome он есть)
+  if (!ua && window.NavigatorUAData) {
+    try {
+      const UP = NavigatorUAData.prototype;
+      const withChrome = (list) => {
+        if (!list || typeof list.length !== 'number') return list;
+        const arr = Array.from(list, (b) => ({ brand: b.brand, version: b.version }));
+        if (arr.some((b) => b.brand === 'Google Chrome')) return list;
+        const i = arr.findIndex((b) => b.brand === 'Chromium');
+        if (i < 0) return list;
+        arr.splice(i + 1, 0, { brand: 'Google Chrome', version: arr[i].version });
+        return Object.freeze(arr.map((b) => Object.freeze(b)));
+      };
+      const bd = Object.getOwnPropertyDescriptor(UP, 'brands');
+      if (bd && bd.get) {
+        const origBrands = bd.get;
+        const g = Object.getOwnPropertyDescriptor({ get brands() { return withChrome(Reflect.apply(origBrands, this, [])); } }, 'brands').get;
+        mask(g, 'get brands');
+        Object.defineProperty(UP, 'brands', { get: g, set: undefined, enumerable: true, configurable: true });
+      }
+      const origHev = UP.getHighEntropyValues;
+      if (typeof origHev === 'function') {
+        const hev = { getHighEntropyValues() {
+          return Reflect.apply(origHev, this, arguments).then((r) => {
+            try {
+              if (r && r.brands) r.brands = withChrome(r.brands);
+              if (r && r.fullVersionList) r.fullVersionList = withChrome(r.fullVersionList);
+            } catch (e) { /* ignore */ }
+            return r;
+          });
+        } }.getHighEntropyValues;
+        mask(hev, 'getHighEntropyValues');
+        Object.defineProperty(UP, 'getHighEntropyValues', { value: hev, writable: true, configurable: true, enumerable: true });
+      }
+      const origJson = UP.toJSON;
+      if (typeof origJson === 'function') {
+        const tj = { toJSON() {
+          const r = Reflect.apply(origJson, this, arguments);
+          try { if (r && r.brands) r.brands = withChrome(r.brands); } catch (e) { /* ignore */ }
+          return r;
+        } }.toJSON;
+        mask(tj, 'toJSON');
+        Object.defineProperty(UP, 'toJSON', { value: tj, writable: true, configurable: true, enumerable: true });
+      }
+    } catch (e) { /* ignore */ }
+  }
+
   // Passkey/WebAuthn: без автозапроса Windows не показывает окно «Electron (GitHub, Inc.)»
   const deny = () => Promise.reject(new DOMException('The operation either timed out or was not allowed.', 'NotAllowedError'));
   if (window.CredentialsContainer) {
@@ -1101,7 +1190,7 @@ function ptFirefoxMainWorld(ua) {
   const GOOGLE_AUTH_HOST_RE = /^accounts\.google\.(?:com|[a-z]{2}|(?:co|com)\.[a-z]{2})$/;
   if (!(h === 'accounts.youtube.com' || h === 'myaccount.google.com' || GOOGLE_AUTH_HOST_RE.test(h))) return;
   // Пустая строка = не менять UA и navigator.*: тогда JS совпадает с HTTP-заголовками. Passkey отключается в любом случае
-  const GOOGLE_FIREFOX_UA = true;
+  const GOOGLE_FIREFOX_UA = false;
   const UA = GOOGLE_FIREFOX_UA ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0' : '';
   try {
     if (typeof contextBridge.executeInMainWorld === 'function') {
