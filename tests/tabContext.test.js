@@ -88,13 +88,31 @@ test('extractTabContext: обычная страница возвращаетс�
   const page = { kind: 'page', title: 'T', url: 'https://example.com/', selection: '', text: 'hello' };
   const wc = {
     isDestroyed: () => false, getURL: () => 'https://example.com/',
-    executeJavaScriptInIsolatedWorld: async () => page
+    executeJavaScriptInIsolatedWorld: async () => JSON.stringify(page)
   };
   assert.deepEqual(await extractTabContext(wc), page);
 
+  // Изолированный мир отдал пустоту (объект не доехал) — читаем в основном мире
+  const fallback = {
+    isDestroyed: () => false, getURL: () => 'https://example.com/',
+    executeJavaScriptInIsolatedWorld: async () => undefined,
+    executeJavaScript: async () => JSON.stringify(page)
+  };
+  assert.deepEqual(await extractTabContext(fallback), page);
+
+  // Оба пути не дали результата — понятная ошибка с причиной
+  const broken = {
+    isDestroyed: () => false, getURL: () => 'https://example.com/',
+    executeJavaScriptInIsolatedWorld: async () => { throw new Error('world gone'); },
+    executeJavaScript: async () => { throw new Error('frame detached'); }
+  };
+  await assert.rejects(extractTabContext(broken), /read-failed: frame detached/);
+  assert.match(describeError(new Error('read-failed: frame detached')), /прочитать вкладку \(read-failed: frame detached\)/);
+
   const pdfWc = {
     isDestroyed: () => false, getURL: () => 'https://example.com/a.pdf', getTitle: () => 'a.pdf',
-    executeJavaScriptInIsolatedWorld: async () => { throw new Error('заблокировано'); }
+    executeJavaScriptInIsolatedWorld: async () => { throw new Error('заблокировано'); },
+    executeJavaScript: async () => { throw new Error('заблокировано'); }
   };
   // pdfjs-dist в тестовом окружении не установлен — ждём именно эту причину, а не падение
   await assert.rejects(extractTabContext(pdfWc), /pdf-engine-missing|pdf-/);
