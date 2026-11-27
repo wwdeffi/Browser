@@ -1075,6 +1075,48 @@ function ptFirefoxMainWorld(ua) {
     if ('chrome' in window) Object.defineProperty(window, 'chrome', { value: undefined, configurable: true });
   }
 
+  // Chrome-режим: у настоящего Chrome в window.chrome есть app, csi и loadTimes, а у Electron объект пустой или отсутствует
+  if (!ua) {
+    try {
+      let ch = window.chrome;
+      if (!ch || typeof ch !== 'object') {
+        ch = {};
+        Object.defineProperty(window, 'chrome', { value: ch, writable: true, configurable: true, enumerable: true });
+      }
+      const origin = () => { try { return (performance.timeOrigin || Date.now()) / 1000; } catch (e) { return Date.now() / 1000; } };
+      if (!ch.csi) {
+        ch.csi = mask({ csi() {
+          const o = origin();
+          return { onloadT: Date.now(), pageT: Date.now() - o * 1000, startE: Math.round(o * 1000), tran: 15 };
+        } }.csi, 'csi');
+      }
+      if (!ch.loadTimes) {
+        ch.loadTimes = mask({ loadTimes() {
+          const s = origin();
+          let proto = 'h2';
+          try { const nav = performance.getEntriesByType('navigation')[0]; if (nav && nav.nextHopProtocol) proto = nav.nextHopProtocol; } catch (e) { /* ignore */ }
+          return {
+            commitLoadTime: s + 0.1, connectionInfo: proto, finishDocumentLoadTime: s + 0.5, finishLoadTime: s + 0.6,
+            firstPaintAfterLoadTime: 0, firstPaintTime: s + 0.4, navigationType: 'Other', npnNegotiatedProtocol: proto,
+            requestTime: s, startLoadTime: s, wasAlternateProtocolAvailable: false,
+            wasFetchedViaSpdy: proto === 'h2' || proto === 'h3', wasNpnNegotiated: true
+          };
+        } }.loadTimes, 'loadTimes');
+      }
+      if (!ch.app) {
+        ch.app = {
+          isInstalled: false,
+          InstallState: { DISABLED: 'disabled', INSTALLED: 'installed', NOT_INSTALLED: 'not_installed' },
+          RunningState: { CANNOT_RUN: 'cannot_run', READY_TO_RUN: 'ready_to_run', RUNNING: 'running' },
+          getDetails: mask({ getDetails() { return null; } }.getDetails, 'getDetails'),
+          getIsInstalled: mask({ getIsInstalled() { return false; } }.getIsInstalled, 'getIsInstalled'),
+          installState: mask({ installState(cb) { if (typeof cb === 'function') cb('not_installed'); } }.installState, 'installState'),
+          runningState: mask({ runningState() { return 'cannot_run'; } }.runningState, 'runningState')
+        };
+      }
+    } catch (e) { /* ignore */ }
+  }
+
   // Chrome-режим: у Electron в navigator.userAgentData.brands нет «Google Chrome» (у настоящего Chrome он есть)
   if (!ua && window.NavigatorUAData) {
     try {

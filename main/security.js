@@ -80,7 +80,9 @@ function cleanUserAgent(app) {
     // между «(KHTML, like Gecko)» и «Chrome/…» стоит токен приложения под любым именем («DEFFIBrowser/1.0.0» и т.п.)
     .replace(/(\(KHTML, like Gecko\))\s+(?:(?!Chrome\/)\S+\s+)+(?=Chrome\/)/, '$1 ')
     .replace(/\s*Electron\/\S+/g, '')
-    .replace(/\s*(?:my-browser|deffi-browser)\/\S+/g, '');
+    .replace(/\s*(?:my-browser|deffi-browser)\/\S+/g, '')
+    // настоящий Chrome с версии 101 отдаёт в UA только мажорную версию: Chrome/158.0.0.0 (полный номер сборки выдаёт Electron)
+    .replace(/Chrome\/(\d+)\.\d+\.\d+\.\d+/, 'Chrome/$1.0.0.0');
 }
 
 // ---- Маскировка под Firefox: только для доменов авторизации Google ----
