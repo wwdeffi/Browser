@@ -112,9 +112,10 @@ test('extractTabContext: обычная страница возвращаетс�
   const pdfWc = {
     isDestroyed: () => false, getURL: () => 'https://example.com/a.pdf', getTitle: () => 'a.pdf',
     executeJavaScriptInIsolatedWorld: async () => { throw new Error('заблокировано'); },
-    executeJavaScript: async () => { throw new Error('заблокировано'); }
+    executeJavaScript: async () => { throw new Error('заблокировано'); },
+    session: { fetch: async () => ({ ok: false, status: 404 }) } // скачивание PDF не удаётся: сеть в тесте не нужна
   };
-  // pdfjs-dist в тестовом окружении не установлен — ждём именно эту причину, а не падение
+  // Движок PDF может быть установлен или нет: в обоих случаях ждём понятную причину, а не падение
   await assert.rejects(extractTabContext(pdfWc), /pdf-engine-missing|pdf-/);
 });
 
