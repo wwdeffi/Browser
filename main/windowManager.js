@@ -665,7 +665,14 @@ class WindowManager {
     try {
       const ctx = await tabContext.extractTabContext(wc);
       if (!this.gemini.isOpen()) this.toggleGeminiPanel(true);
-      const res = await this.gemini.insertText(tabContext.buildContextBlock(ctx));
+      let res;
+      try {
+        res = await this.gemini.insertText(tabContext.buildContextBlock(ctx));
+      } catch (err) {
+        // Сбой именно вставки, а не чтения вкладки: сообщаем об этом отдельно
+        console.warn('[gemini-context] сбой вставки в Gemini:', err);
+        res = { ok: false, reason: 'paste-failed' };
+      }
       if (!res.ok) {
         console.warn('[gemini-context] не удалось вставить в Gemini:', res.reason);
         setStatus({ note: REASONS[res.reason] || 'Не удалось передать контекст в Gemini.', error: true }, 5000);

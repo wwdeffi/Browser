@@ -236,19 +236,28 @@ class GeminiPanel {
     }
 
     wc.focus();
-    const saved = { text: clipboard.readText(), html: clipboard.readHTML(), image: clipboard.readImage() };
+    // Прежний буфер обмена сохраняем и возвращаем после вставки. Каждый метод может отсутствовать
+    // в конкретной версии Electron, поэтому читаем осторожно: сбой чтения не должен срывать вставку
+    const saved = {};
+    for (const [key, method] of [['text', 'readText'], ['html', 'readHTML'], ['image', 'readImage']]) {
+      try { if (typeof clipboard[method] === 'function') saved[key] = clipboard[method](); } catch { /* формат недоступен */ }
+    }
     try {
       clipboard.writeText(String(text));
       wc.paste();
-    } catch {
+    } catch (err) {
+      console.warn('[gemini-context] вставка не удалась:', err && err.message);
       return { ok: false, reason: 'paste-failed' };
     } finally {
       // Вставка асинхронна: даём ей отработать и только потом возвращаем прежний буфер
       setTimeout(() => {
         try {
-          const data = { text: saved.text, html: saved.html };
-          if (saved.image && !saved.image.isEmpty()) data.image = saved.image;
-          clipboard.write(data);
+          const data = {};
+          if (typeof saved.text === 'string') data.text = saved.text;
+          if (typeof saved.html === 'string' && saved.html) data.html = saved.html;
+          if (saved.image && typeof saved.image.isEmpty === 'function' && !saved.image.isEmpty()) data.image = saved.image;
+          if (Object.keys(data).length) clipboard.write(data);
+          else clipboard.clear();
         } catch { /* буфер недоступен */ }
       }, 600);
     }
