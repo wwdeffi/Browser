@@ -880,6 +880,7 @@
   const geminiBtn = document.getElementById('btn-gemini');
   const geminiDivider = document.getElementById('gemini-divider');
   const geminiCtxBtn = document.getElementById('btn-gemini-context');
+  const geminiCtxNote = document.getElementById('gemini-context-note');
   let geminiDragging = false;
   let geminiRaf = 0;
   let geminiPending = null;
@@ -900,6 +901,9 @@
     geminiCtxBtn.dataset.state = ctx.busy ? 'busy' : ctx.error ? 'error' : ctx.note ? 'done' : '';
     geminiCtxBtn.title = ctx.note || 'Передать Gemini контекст вкладки (Alt+Shift+G)';
     geminiCtxBtn.setAttribute('aria-label', geminiCtxBtn.title);
+    geminiCtxNote.hidden = !open || !ctx.note;
+    geminiCtxNote.textContent = ctx.note || '';
+    geminiCtxNote.dataset.state = geminiCtxBtn.dataset.state;
     if (!open) return;
     const bar = document.getElementById('findbar');
     const bmb = document.getElementById('bmbar');

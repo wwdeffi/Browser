@@ -74,22 +74,56 @@ const TIDY_SCRIPT = `(() => {
 
 const TIDY_WORLD_ID = 1207; // отдельный изолированный мир для наших правок панели
 
-// Ставит курсор в конец поля ввода Gemini (редактор Quill внутри <rich-textarea>); true — поле найдено и в фокусе
-const FOCUS_EDITOR_SCRIPT = `(() => {
-  const cands = document.querySelectorAll('rich-textarea .ql-editor, rich-textarea [contenteditable="true"], div[contenteditable="true"][role="textbox"], [contenteditable="true"]');
-  for (const el of cands) {
+// Ищет поле ввода Gemini по нескольким признакам (разметка сайта меняется): редактор contenteditable, role=textbox,
+// textarea, в том числе внутри открытых shadow-root. Ставит курсор в конец; true — поле найдено и в фокусе
+const EDITOR_FINDER = `
+  const SELS = ['rich-textarea [contenteditable]:not([contenteditable="false"])', '[contenteditable="true"]',
+    '[contenteditable="plaintext-only"]', '[role="textbox"]', 'textarea'];
+  const collect = (root, out) => {
+    for (const sel of SELS) for (const el of root.querySelectorAll(sel)) if (!out.includes(el)) out.push(el);
+    for (const el of root.querySelectorAll('*')) if (el.shadowRoot) collect(el.shadowRoot, out);
+    return out;
+  };
+  const usable = (el) => {
     const r = el.getBoundingClientRect();
-    if (r.width < 40 || r.height < 10) continue;
-    el.focus();
+    return r.width >= 40 && r.height >= 10 && !el.disabled && !el.readOnly;
+  };`;
+
+const FOCUS_EDITOR_SCRIPT = `(() => {${EDITOR_FINDER}
+  const el = collect(document, []).find(usable);
+  if (!el) return false;
+  el.focus();
+  if (el.tagName === 'TEXTAREA') {
+    el.setSelectionRange(el.value.length, el.value.length);
+  } else {
     const sel = window.getSelection();
     const range = document.createRange();
     range.selectNodeContents(el);
     range.collapse(false);
     sel.removeAllRanges();
     sel.addRange(range);
-    return true;
   }
-  return false;
+  return true;
+})()`;
+
+// Фокус сейчас в поле ввода? (после запасного клика мышью)
+const IS_EDITING_SCRIPT = `(() => {
+  let a = document.activeElement;
+  while (a && a.shadowRoot && a.shadowRoot.activeElement) a = a.shadowRoot.activeElement;
+  if (!a) return false;
+  return a.isContentEditable || a.tagName === 'TEXTAREA' || a.getAttribute('role') === 'textbox';
+})()`;
+
+// Для отчёта об ошибке: что на странице похоже на поле ввода
+const DESCRIBE_EDITORS_SCRIPT = `(() => {${EDITOR_FINDER}
+  const all = collect(document, []);
+  const d = (el) => {
+    const r = el.getBoundingClientRect();
+    return el.tagName.toLowerCase() + (el.getAttribute('role') ? '[role=' + el.getAttribute('role') + ']' : '')
+      + (el.getAttribute('aria-label') ? '[aria-label=' + el.getAttribute('aria-label') + ']' : '')
+      + ' ' + Math.round(r.width) + 'x' + Math.round(r.height);
+  };
+  return { total: all.length, items: all.slice(0, 8).map(d), active: document.activeElement ? document.activeElement.tagName : null };
 })()`;
 
 const INSERT_WAIT_MS = 8000; // сколько ждём появления поля ввода (панель могла только что открыться)
@@ -177,16 +211,29 @@ class GeminiPanel {
     const wc = this._wc();
     if (!wc || !text) return { ok: false, reason: 'no-panel' };
 
+    const run = (code) => wc.executeJavaScriptInIsolatedWorld(TIDY_WORLD_ID, [{ code }]).catch(() => false);
     let focused = false;
     const deadline = Date.now() + INSERT_WAIT_MS;
     while (!focused && Date.now() < deadline) {
       if (!this._wc()) return { ok: false, reason: 'no-panel' };
-      if (isGeminiAppUrl(wc.getURL())) {
-        focused = await wc.executeJavaScriptInIsolatedWorld(TIDY_WORLD_ID, [{ code: FOCUS_EDITOR_SCRIPT }]).catch(() => false);
-      }
+      if (isGeminiAppUrl(wc.getURL())) focused = await run(FOCUS_EDITOR_SCRIPT);
       if (!focused) await sleep(300);
     }
-    if (!focused) return { ok: false, reason: isGeminiAppUrl(wc.getURL()) ? 'no-input' : 'not-signed-in' };
+    if (!focused && isGeminiAppUrl(wc.getURL())) {
+      // Запасной путь: кликаем туда, где у Gemini строка ввода (внизу панели), и проверяем, что фокус попал в поле
+      const b = this.view.getBounds();
+      const x = Math.round(b.width * 0.4);
+      const y = Math.max(10, b.height - 50);
+      wc.focus();
+      for (const type of ['mouseDown', 'mouseUp']) wc.sendInputEvent({ type, x, y, button: 'left', clickCount: 1 });
+      await sleep(250);
+      focused = await run(IS_EDITING_SCRIPT);
+    }
+    if (!focused) {
+      const info = isGeminiAppUrl(wc.getURL()) ? await run(DESCRIBE_EDITORS_SCRIPT) : null;
+      console.warn('[gemini-context] поле ввода не найдено:', wc.getURL(), JSON.stringify(info));
+      return { ok: false, reason: isGeminiAppUrl(wc.getURL()) ? 'no-input' : 'not-signed-in' };
+    }
 
     wc.focus();
     const saved = { text: clipboard.readText(), html: clipboard.readHTML(), image: clipboard.readImage() };
@@ -323,5 +370,8 @@ module.exports = {
   clampWidth,
   isGeminiAppUrl,
   shouldHideLabel,
+  FOCUS_EDITOR_SCRIPT,
+  IS_EDITING_SCRIPT,
+  DESCRIBE_EDITORS_SCRIPT,
   TIDY_SCRIPT
 };

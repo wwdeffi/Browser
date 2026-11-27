@@ -1316,6 +1316,24 @@ html[data-incognito='1'] #titlebar::after {
   color: #ff6b6b;
 }
 
+/* Текст статуса рядом с кнопкой: пока идёт чтение, и несколько секунд после результата или ошибки */
+#gemini-context-note {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-muted, currentColor);
+}
+
+#gemini-context-note[data-state="error"] {
+  color: #ff6b6b;
+}
+
+#gemini-context-note[hidden] {
+  display: none;
+}
+
 #gemini-divider {
   position: fixed;
   top: var(--gemini-top, 0);
