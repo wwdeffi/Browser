@@ -82,6 +82,10 @@ if (window.location.protocol === 'file:') contextBridge.exposeInMainWorld('brows
   // Вертикальные вкладки: включить/выключить сайдбар и свернуть/развернуть его
   toggleVerticalTabs: () => ipcRenderer.send('ui:vertical-tabs'),
   toggleVerticalTabsCollapsed: () => ipcRenderer.send('ui:vertical-tabs-collapse'),
+  // Боковая панель Gemini
+  toggleGemini: () => ipcRenderer.send('ui:gemini-toggle'),
+  reloadGemini: () => ipcRenderer.send('ui:gemini-reload'),
+  resizeGemini: (width) => ipcRenderer.send('ui:gemini-resize', Number(width)),
 
   // Подсказки адресной строки (попап — отдельный WebContentsView в main)
   omniboxQuery: (text, rect) => ipcRenderer.send('omnibox:query', String(text), {

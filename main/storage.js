@@ -153,6 +153,12 @@ function isHttpUrl(rawUrl) {
   }
 }
 
+function clampGeminiWidth(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return 420;
+  return Math.min(760, Math.max(320, n));
+}
+
 function sanitizeSettings(raw) {
   const merged = { ...DEFAULT_SETTINGS, ...PROXY_DEFAULTS, ...(raw && typeof raw === 'object' ? raw : {}) };
   if (!['dark', 'light', 'system'].includes(merged.theme)) merged.theme = DEFAULT_SETTINGS.theme;
@@ -170,6 +176,8 @@ function sanitizeSettings(raw) {
   merged.transparentChrome = Boolean(merged.transparentChrome);
   merged.verticalTabs = Boolean(merged.verticalTabs); // вертикальные вкладки (сайдбар слева): по умолчанию выключено
   merged.verticalTabsCollapsed = Boolean(merged.verticalTabsCollapsed); // сайдбар свёрнут в узкую полоску с иконками
+  // Ширина боковой панели Gemini (px); диапазон совпадает с GEMINI_MIN_WIDTH..GEMINI_MAX_WIDTH в geminiPanel.js
+  merged.geminiPanelWidth = clampGeminiWidth(merged.geminiPanelWidth);
   merged.showBookmarksBar = Boolean(merged.showBookmarksBar); // панель закладок под тулбаром (Ctrl+Shift+B): по умолчанию выключена
   merged.trustedSources = merged.trustedSources !== undefined ? Boolean(merged.trustedSources) : true;
   merged.adblock = merged.adblock !== undefined ? Boolean(merged.adblock) : true;

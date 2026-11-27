@@ -826,6 +826,13 @@
   let splitRaf = 0;
   let splitPending = null;
 
+  // Ширина области страниц: окно минус сайдбар вертикальных вкладок и панель Gemini справа (как в TabManager.layout)
+  function pagesWidth() {
+    const g = state.gemini || {};
+    const gemini = g.open ? Math.max(0, Number(g.width) || 0) + (Number(g.gap) || 6) : 0;
+    return Math.max(0, window.innerWidth - vtWidth - gemini);
+  }
+
   function renderSplit() {
     const on = state.splitTabId !== null && state.splitTabId !== undefined;
     splitDivider.hidden = !on;
@@ -836,7 +843,7 @@
     // setProperty разрешён при CSP style-src 'self' (атрибут style в разметке был бы заблокирован)
     splitDivider.style.setProperty('--split-top', `${Math.round(ref.getBoundingClientRect().bottom)}px`);
     // В вертикальном режиме страницы занимают только область справа от сайдбара
-    splitDivider.style.setProperty('--split-left', `${Math.round(vtWidth + (window.innerWidth - vtWidth - SPLIT_GAP) * (state.splitRatio || 0.5))}px`);
+    splitDivider.style.setProperty('--split-left', `${Math.round(vtWidth + (pagesWidth() - SPLIT_GAP) * (state.splitRatio || 0.5))}px`);
   }
 
   function endSplitDrag(e) {
@@ -855,7 +862,7 @@
   });
   splitDivider.addEventListener('pointermove', (e) => {
     if (!splitDragging) return;
-    splitPending = (e.clientX - vtWidth - SPLIT_GAP / 2) / (window.innerWidth - vtWidth - SPLIT_GAP);
+    splitPending = (e.clientX - vtWidth - SPLIT_GAP / 2) / (pagesWidth() - SPLIT_GAP);
     if (splitRaf) return;
     splitRaf = requestAnimationFrame(() => {
       splitRaf = 0;
@@ -868,6 +875,64 @@
   splitDivider.addEventListener('lostpointercapture', endSplitDrag);
   splitDivider.addEventListener('dblclick', () => window.browser.splitResize(0.5));
   window.addEventListener('resize', renderSplit);
+
+  // ---- Боковая панель Gemini: кнопка в тулбаре и разделитель в 6px-зазоре слева от панели ----
+  const geminiBtn = document.getElementById('btn-gemini');
+  const geminiDivider = document.getElementById('gemini-divider');
+  let geminiDragging = false;
+  let geminiRaf = 0;
+  let geminiPending = null;
+
+  function renderGemini() {
+    const g = state.gemini || {};
+    const available = g.available !== false;
+    const open = available && Boolean(g.open);
+    geminiBtn.hidden = !available;
+    geminiBtn.setAttribute('aria-pressed', String(open));
+    geminiBtn.title = open ? 'Закрыть Gemini (Alt+G)' : 'Спросить Gemini (Alt+G)';
+    geminiBtn.setAttribute('aria-label', geminiBtn.title);
+    geminiDivider.hidden = !open;
+    if (!open) return;
+    const bar = document.getElementById('findbar');
+    const bmb = document.getElementById('bmbar');
+    const ref = bar && !bar.hidden ? bar : (bmb && !bmb.hidden ? bmb : document.getElementById('toolbar'));
+    const gap = Number(g.gap) || 6;
+    const width = Math.max(0, Number(g.width) || 0);
+    geminiDivider.style.setProperty('--gemini-top', `${Math.round(ref.getBoundingClientRect().bottom)}px`);
+    geminiDivider.style.setProperty('--gemini-left', `${Math.round(window.innerWidth - width - gap)}px`);
+  }
+
+  function endGeminiDrag(e) {
+    if (!geminiDragging) return;
+    geminiDragging = false;
+    geminiDivider.classList.remove('dragging');
+    try { geminiDivider.releasePointerCapture(e.pointerId); } catch { /* уже снят */ }
+  }
+
+  geminiBtn.addEventListener('click', () => window.browser.toggleGemini());
+  geminiDivider.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    geminiDragging = true;
+    geminiDivider.classList.add('dragging');
+    geminiDivider.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  geminiDivider.addEventListener('pointermove', (e) => {
+    if (!geminiDragging) return;
+    const gap = Number(state.gemini?.gap) || 6;
+    geminiPending = window.innerWidth - e.clientX - gap / 2;
+    if (geminiRaf) return;
+    geminiRaf = requestAnimationFrame(() => {
+      geminiRaf = 0;
+      if (geminiPending !== null) window.browser.resizeGemini(geminiPending); // clamp — в main
+      geminiPending = null;
+    });
+  });
+  geminiDivider.addEventListener('pointerup', endGeminiDrag);
+  geminiDivider.addEventListener('pointercancel', endGeminiDrag);
+  geminiDivider.addEventListener('lostpointercapture', endGeminiDrag);
+  geminiDivider.addEventListener('dblclick', () => window.browser.resizeGemini(420));
+  window.addEventListener('resize', renderGemini);
 
   // Сайдбар вертикальных вкладок: режим и ширина приходят из main; CSS реагирует на data-vtabs / data-vtabs-collapsed
   function renderVerticalTabs() {
@@ -909,6 +974,7 @@
     renderTabs();
     renderChrome();
     renderSplit();
+    renderGemini();
     scheduleToastLayout();
   }
 
@@ -1146,6 +1212,7 @@
     findPrevBtn.disabled = total === 0;
     findNextBtn.disabled = total === 0;
     renderSplit(); // панель поиска сдвигает страницы вниз — меняется и top разделителя
+    renderGemini();
   }
 
   function sendFindQuery() {
