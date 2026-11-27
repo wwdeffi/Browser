@@ -169,3 +169,19 @@ test('GeminiPanel.insertText: вставка работает, даже если
   await new Promise((r) => setTimeout(r, 700));
   assert.deepEqual(calls[1], ['write', { text: 'старый буфер' }], 'прежний текст из буфера вернулся');
 });
+
+test('buildContextFile: имя из заголовка, без служебных символов; содержимое и пометка об обрезке', () => {
+  const { buildContextFile } = require('../main/tabContext');
+  const f = buildContextFile({ kind: 'page', title: 'Мона Лиза: Википедия/тест', url: 'https://x.org/a', text: 'абв'.repeat(10) }, { maxChars: 10 });
+  assert.equal(f.name, 'Мона Лиза Википедия тест.md');
+  assert.match(f.text, /^# Мона Лиза/);
+  assert.match(f.text, /Адрес: https:\/\/x\.org\/a/);
+  assert.match(f.text, /Текст обрезан/);
+});
+
+test('buildAttachScript: валидный JS, файл и событие paste', () => {
+  const { buildAttachScript } = require('../main/geminiPanel');
+  const code = buildAttachScript('a "q".md', 'текст\n`x`', 'text/markdown');
+  assert.doesNotThrow(() => new Function(code));
+  assert.match(code, /new ClipboardEvent\('paste'/);
+});

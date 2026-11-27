@@ -667,7 +667,13 @@ class WindowManager {
       if (!this.gemini.isOpen()) this.toggleGeminiPanel(true);
       let res;
       try {
-        res = await this.gemini.insertText(tabContext.buildContextBlock(ctx));
+        // Сначала пробуем приложить страницу файлом (в поле остаётся только вопрос); не принял — вставляем текстом
+        const file = tabContext.buildContextFile(ctx);
+        res = await this.gemini.attachFile(file.name, file.text);
+        if (!res.ok && res.reason === 'not-accepted') {
+          console.warn('[gemini-context] Gemini не принял файл, вставляю текстом');
+          res = await this.gemini.insertText(tabContext.buildContextBlock(ctx));
+        }
       } catch (err) {
         // Сбой именно вставки, а не чтения вкладки: сообщаем об этом отдельно
         console.warn('[gemini-context] сбой вставки в Gemini:', err);
