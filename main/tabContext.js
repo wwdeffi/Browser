@@ -241,7 +241,8 @@ async function extractTabContext(wc, { maxChars = MAX_CONTEXT_CHARS } = {}) {
   try {
     const code = `(${pageExtractor.toString()})(${Number(maxChars)}, ${MAX_SELECTION_CHARS})`;
     ctx = await wc.executeJavaScriptInIsolatedWorld(TAB_CONTEXT_WORLD_ID, [{ code }]);
-  } catch {
+  } catch (err) {
+    console.warn('[gemini-context] скрипт чтения страницы не выполнился:', err && err.message);
     // PDF-просмотрщик и подобные документы могут не пустить скрипт: тогда ориентируемся на адрес
     ctx = looksLikePdfUrl(url) ? { kind: 'pdf', title: wc.getTitle(), url, selection: '', text: '' } : null;
   }

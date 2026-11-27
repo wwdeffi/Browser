@@ -667,12 +667,14 @@ class WindowManager {
       if (!this.gemini.isOpen()) this.toggleGeminiPanel(true);
       const res = await this.gemini.insertText(tabContext.buildContextBlock(ctx));
       if (!res.ok) {
+        console.warn('[gemini-context] не удалось вставить в Gemini:', res.reason);
         setStatus({ note: REASONS[res.reason] || 'Не удалось передать контекст в Gemini.', error: true }, 5000);
         return;
       }
       const what = ctx.kind === 'pdf' ? 'PDF' : 'страница';
       setStatus({ note: `Контекст добавлен: ${what} «${(ctx.title || ctx.url || '').slice(0, 60)}»` }, 3500);
     } catch (err) {
+      console.warn('[gemini-context] не удалось прочитать вкладку:', err);
       setStatus({ note: tabContext.describeError(err), error: true }, 5000);
     }
   }
