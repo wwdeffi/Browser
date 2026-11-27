@@ -18,6 +18,7 @@ const storage = require('./storage');
 const TabManager = require('./tabManager');
 const OmniboxPopup = require('./omniboxPopup');
 const MainMenuPopup = require('./mainMenuPopup');
+const { GeminiPanel, GEMINI_GAP } = require('./geminiPanel');
 const DownloadsPopup = require('./downloadsPopup');
 const { buildCustomTheme, sanitizeSeed } = require('./customTheme');
 const { setCustomTokens } = require('./searchTheme');
@@ -259,6 +260,7 @@ class WindowManager {
   updateWindowBackground() {
     if (!this.win || this.win.isDestroyed()) return;
     this.win.setBackgroundColor(this.getFrameBackgroundColor());
+    this.gemini?.updateBackground();
   }
 
   applyTheme(theme, persist = true) {
@@ -563,6 +565,8 @@ class WindowManager {
       onFindFocus: () => this.focusFindBar(),
       onAuthChange: () => this.sendAuthState(),
       getInsets: () => this._getPageInsets(),
+      getRightInset: (windowWidth) => this._getGeminiInset(windowWidth),
+      onLayout: ({ panelRect }) => this._layoutGemini(panelRect),
       isOverlayOpen: () => this._sitePopoverOpen
     });
     return tm;
@@ -593,6 +597,75 @@ class WindowManager {
     const vt = this.getVerticalTabsInfo();
     const top = this.getBookmarksBarHeight() - (vt.enabled ? Math.round(this._tabbarHeight) : 0);
     return { left: vt.enabled ? vt.width : 0, top };
+  }
+
+  // ---- Боковая панель Gemini ----
+  // В Инкогнито панель недоступна (как в Chrome): там не должно быть входа в Google-аккаунт
+  isGeminiAvailable() {
+    return !this.isIncognito;
+  }
+
+  _getGeminiInset(windowWidth) {
+    if (!this.gemini || !this.isGeminiAvailable()) return 0;
+    return this.gemini.reservedWidth(windowWidth);
+  }
+
+  _layoutGemini(panelRect) {
+    if (!this.gemini) return;
+    if (!panelRect || !this.isGeminiAvailable()) { this.gemini.layout(null); return; }
+    // panelRect включает зазор с разделителем слева
+    this.gemini.layout({
+      x: Math.round(panelRect.x + GEMINI_GAP),
+      y: Math.round(panelRect.y),
+      width: Math.max(0, Math.round(panelRect.width - GEMINI_GAP)),
+      height: Math.round(panelRect.height)
+    });
+  }
+
+  getGeminiState() {
+    const st = this.gemini ? this.gemini.getState() : { open: false, width: 0, gap: GEMINI_GAP };
+    const available = this.isGeminiAvailable();
+    const [w] = this.win && !this.win.isDestroyed() ? this.win.getContentSize() : [0];
+    return {
+      available,
+      open: available && st.open,
+      width: available && st.open && this.gemini ? this.gemini.effectiveWidth(w) : 0,
+      gap: st.gap
+    };
+  }
+
+  toggleGeminiPanel(force) {
+    if (!this.gemini || !this.isGeminiAvailable()) return;
+    const open = typeof force === 'boolean' ? force : !this.gemini.isOpen();
+    this.omnibox?.hide();
+    this.mainMenu?.hide();
+    this.downloadsPopup?.hide();
+    this.gemini.setOpen(open);
+    try { this.tabManager?.layout(); } catch { /* окно закрывается */ }
+    if (open) this.gemini.focus();
+    else {
+      const wc = this._getActiveWebContents();
+      if (wc && !wc.isDestroyed()) wc.focus();
+    }
+    this.sendState();
+  }
+
+  resizeGeminiPanel(width) {
+    if (!this.gemini || !this.gemini.isOpen()) return;
+    if (!this.gemini.setWidth(width)) return;
+    try { this.tabManager?.layout(); } catch { /* окно закрывается */ }
+    this.sendState();
+    // Ширину запоминаем с задержкой: во время перетаскивания событий десятки в секунду
+    clearTimeout(this._geminiWidthTimer);
+    this._geminiWidthTimer = setTimeout(() => {
+      if (this.gemini && this.settings.geminiPanelWidth !== this.gemini.width) {
+        this.updateSettings({ geminiPanelWidth: this.gemini.width });
+      }
+    }, 400);
+  }
+
+  reloadGeminiPanel() {
+    this.gemini?.reload();
   }
 
   _readTabbarHeight() {
@@ -807,6 +880,17 @@ class WindowManager {
 
     // Прокси обычной сессии применяется до создания первой вкладки (ожидается в did-finish-load)
     this._proxyReady = this.applyProxy();
+
+    // Панель Gemini создаётся закрытой; WebContentsView с gemini.google.com появляется при первом открытии
+    this.gemini = new GeminiPanel({
+      win: this.win,
+      getSession: () => session.defaultSession, // общая с вкладками сессия: общий вход в Google
+      width: this.settings.geminiPanelWidth,
+      getBackgroundColor: () => this.getPageBackgroundColor(),
+      openInTab: (url) => this.tabManager?.createTab(url),
+      onShortcut: (event, input) => this.handleShortcut(event, input, 'gemini'),
+      onRelayout: () => { try { this.tabManager?.layout(); } catch { /* окно закрывается */ } }
+    });
     if (opts.incognitoSession) {
       this._incognitoSession = opts.incognitoSession;
       this.isIncognito = true;
@@ -966,6 +1050,11 @@ class WindowManager {
         this.downloadsPopup.destroy();
         this.downloadsPopup = null;
       }
+      clearTimeout(this._geminiWidthTimer);
+      if (this.gemini) {
+        this.gemini.destroy();
+        this.gemini = null;
+      }
       if (this.tabManager) {
         this.tabManager.destroyAll();
         this.tabManager = null;
@@ -1019,6 +1108,7 @@ class WindowManager {
       isMaximized: this.win.isMaximized(),
       isIncognito: this.isIncognito,
       verticalTabs: this.getVerticalTabsInfo(),
+      gemini: this.getGeminiState(),
       bookmarksBar: { visible: this.getBookmarksBarHeight() > 0, height: BM_BAR_HEIGHT },
       bookmarksRev: this.getBookmarksBarHeight() > 0 ? storage.getBookmarksRev() : 0, // панель перечитывает дерево при смене ревизии
       isBookmarked: this.isIncognito ? false : storage.isBookmarked(rawActiveUrl),
@@ -1045,6 +1135,13 @@ class WindowManager {
     const code = input.code;
 
     if (alt && !ctrl && !shift) {
+      // Alt+G — панель Gemini, как в Chrome
+      if (code === 'KeyG') {
+        event.preventDefault();
+        this.toggleGeminiPanel();
+        return;
+      }
+      if (source === 'gemini') return; // остальные Alt-сочетания в панели (Назад/Вперёд) — её собственные
       if (code === 'ArrowLeft') {
         event.preventDefault();
         this.tabManager.goBack();

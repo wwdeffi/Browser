@@ -166,7 +166,9 @@ class TabManager {
     onFindFocus,
     onAuthChange,
     isOverlayOpen,
-    getInsets
+    getInsets,
+    getRightInset,
+    onLayout
   }) {
     this.win = win;
     this.session = session;
@@ -174,6 +176,9 @@ class TabManager {
     this.getSettings = getSettings;
     // { left, top }: сдвиг области страницы (сайдбар вертикальных вкладок, панель закладок)
     this.getInsets = typeof getInsets === 'function' ? getInsets : () => ({ left: 0, top: 0 });
+    // Ширина справа, занятая боковой панелью Gemini (зависит от ширины окна), и колбэк с её областью после раскладки
+    this.getRightInset = typeof getRightInset === 'function' ? getRightInset : () => 0;
+    this.onLayout = typeof onLayout === 'function' ? onLayout : () => {};
     this.getResolvedTheme = getResolvedTheme;
     this.isTransparentChrome = typeof isTransparentChrome === 'function' ? isTransparentChrome : () => false;
     this.getChromeTheme = getChromeTheme || (() => 'cyber-blue');
@@ -2110,7 +2115,9 @@ class TabManager {
     // Страница занимает всё окно под панелью: без рамки по краям и без скруглений
     const left = extra.left;
     const radius = 0;
-    const viewWidth = Math.max(0, w - left);
+    // Справа может стоять панель Gemini; в HTML-fullscreen видео занимает всё окно
+    const right = this.isHtmlFullscreen ? 0 : Math.max(0, Number(this.getRightInset?.(w)) || 0);
+    const viewWidth = Math.max(0, w - left - right);
     const viewHeight = Math.max(0, h - topOffset);
 
     const split = this._getSplitTab();
@@ -2150,6 +2157,12 @@ class TabManager {
         }
       }
     }
+
+    // Панель Gemini: та же высота, что у страниц, справа от зазора; прячется под модалками интерфейса и в HTML-fullscreen
+    const panelRect = right > 0 && !authOpen
+      ? { x: left + viewWidth, y: topOffset, width: right, height: viewHeight }
+      : null;
+    try { this.onLayout?.({ panelRect }); } catch { /* панель уничтожена */ }
   }
 
   getStateSnapshot() {

@@ -553,6 +553,11 @@ function registerIpcHandlers(registry, energySaver) {
   handleUi('ui:toggle-incognito', () => windowManager.toggleIncognito());
   handleUi('ui:vertical-tabs', () => windowManager.toggleVerticalTabs());
   handleUi('ui:vertical-tabs-collapse', () => windowManager.toggleVerticalTabsCollapsed());
+  handleUi('ui:gemini-toggle', () => windowManager.toggleGeminiPanel());
+  handleUi('ui:gemini-reload', () => windowManager.reloadGeminiPanel());
+  handleUi('ui:gemini-resize', (width) => {
+    if (typeof width === 'number' && Number.isFinite(width)) windowManager.resizeGeminiPanel(width);
+  });
   handleUi('bookmark:toggle', () => windowManager.toggleBookmarkActive());
   handleUi('ui:bookmarks-bar', () => windowManager.toggleBookmarksBar()); // Ctrl+Shift+B / меню
   handleUi('bookmark:popover', () => windowManager.openBookmarkPopover()); // звёздочка
