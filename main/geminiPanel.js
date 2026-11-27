@@ -39,6 +39,50 @@ function isHttpUrl(rawUrl) {
   }
 }
 
+// Кнопки «Скачать приложение» и т.п. в шапке сайта: в узкой панели они наезжают на заголовок «Gemini».
+// В Chrome у панели своя версия без них — у нас прячем их скриптом по тексту (классы сайта меняются, текст стабильнее)
+const HIDE_LABEL_RE = /скачать приложение|download (the )?app|get the app|получить приложение/i;
+
+function shouldHideLabel(text) {
+  const t = String(text || '').replace(/\s+/g, ' ').trim();
+  return t.length > 0 && t.length <= 60 && HIDE_LABEL_RE.test(t);
+}
+
+// Выполняется в изолированном мире страницы gemini.google.com: DOM общий, переменные сайта недоступны.
+// Через CSSOM (style.setProperty) — не упирается ни в CSP, ни в Trusted Types сайта
+const TIDY_SCRIPT = `(() => {
+  if (window.__deffiGeminiTidy) return;
+  window.__deffiGeminiTidy = true;
+  const re = ${HIDE_LABEL_RE.toString()};
+  const tidy = () => {
+    for (const el of document.querySelectorAll('a, button, [role="button"]')) {
+      if (el.dataset.deffiHidden) continue;
+      const t = (el.textContent || el.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim();
+      if (t && t.length <= 60 && re.test(t)) {
+        el.style.setProperty('display', 'none', 'important');
+        el.dataset.deffiHidden = '1';
+      }
+    }
+  };
+  tidy();
+  let timer = 0;
+  new MutationObserver(() => {
+    clearTimeout(timer);
+    timer = setTimeout(tidy, 120);
+  }).observe(document.documentElement, { childList: true, subtree: true });
+})();`;
+
+const TIDY_WORLD_ID = 1207; // отдельный изолированный мир для наших правок панели
+
+function isGeminiAppUrl(rawUrl) {
+  try {
+    const u = new URL(rawUrl);
+    return u.protocol === 'https:' && u.hostname === 'gemini.google.com';
+  } catch {
+    return false;
+  }
+}
+
 function clampWidth(width) {
   const n = Math.round(Number(width));
   if (!Number.isFinite(n)) return GEMINI_DEFAULT_WIDTH;
@@ -183,6 +227,12 @@ class GeminiPanel {
       if (isMainFrame) guardNavigation(event, url);
     });
 
+    // Прячем кнопки шапки, которые в узкой панели наезжают на заголовок
+    wc.on('dom-ready', () => {
+      if (!isGeminiAppUrl(wc.getURL())) return;
+      wc.executeJavaScriptInIsolatedWorld(TIDY_WORLD_ID, [{ code: TIDY_SCRIPT }]).catch(() => { /* страница ушла */ });
+    });
+
     if (this.onShortcut) {
       wc.on('before-input-event', (event, input) => this.onShortcut(event, input));
     }
@@ -211,5 +261,7 @@ module.exports = {
   GEMINI_MAX_WIDTH,
   GEMINI_DEFAULT_WIDTH,
   isPanelUrl,
-  clampWidth
+  clampWidth,
+  shouldHideLabel,
+  TIDY_SCRIPT
 };
