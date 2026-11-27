@@ -60,3 +60,12 @@ test('layout: панель Gemini сужает страницу и получа�
   assert.deepEqual(bounds, { x: 0, y: 0, width: 1400, height: 900 });
   assert.equal(panel, null);
 });
+
+test('shouldHideLabel: прячем только короткие кнопки «Скачать приложение»', () => {
+  const { shouldHideLabel } = require('../main/geminiPanel');
+  assert.ok(shouldHideLabel('download Скачать приложение'));
+  assert.ok(shouldHideLabel('Download app'));
+  assert.ok(!shouldHideLabel('Gemini'));
+  assert.ok(!shouldHideLabel(''));
+  assert.ok(!shouldHideLabel('Как скачать приложение на телефон и настроить его, подробная инструкция для новичков'));
+});
