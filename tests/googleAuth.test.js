@@ -58,3 +58,18 @@ test('OAuth-попапы всегда получают tabPreload, а will-redir
   const navigate = tm.slice(tm.indexOf("wc.on('will-navigate'"), tm.indexOf("wc.on('will-redirect'"));
   assert.ok(navigate.includes('this._switchGoogleAuthUa('), 'will-navigate потерял смену UA');
 });
+
+test('addGoogleChromeBrand: добавляет бренд «Google Chrome» после Chromium и не дублирует', () => {
+  require('./helpers');
+  const { addGoogleChromeBrand } = require('../main/security');
+  assert.equal(
+    addGoogleChromeBrand('"Not.A/Brand";v="8", "Chromium";v="142"'),
+    '"Not.A/Brand";v="8", "Chromium";v="142", "Google Chrome";v="142"'
+  );
+  assert.equal(
+    addGoogleChromeBrand('"Chromium";v="142.0.7444.59", "Not.A/Brand";v="8.0.0.0"'),
+    '"Chromium";v="142.0.7444.59", "Google Chrome";v="142.0.7444.59", "Not.A/Brand";v="8.0.0.0"'
+  );
+  const already = '"Chromium";v="142", "Google Chrome";v="142"';
+  assert.equal(addGoogleChromeBrand(already), already);
+});

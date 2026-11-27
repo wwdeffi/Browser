@@ -107,6 +107,23 @@ function isGoogleAuthRequest(details) {
   return isGoogleAuthUrl(safeGetUrl(details.webContents));
 }
 
+// Electron не Google Chrome: в Sec-CH-UA у него нет бренда «Google Chrome», а у настоящего Chrome он есть.
+// На страницах входа добавляем его (версия та же, что у Chromium), чтобы заголовок совпадал с User-Agent
+function addGoogleChromeBrand(value) {
+  const v = String(value);
+  if (/"Google Chrome"/.test(v)) return v;
+  return v.replace(/"Chromium";v="([^"]*)"/, (m, ver) => `${m}, "Google Chrome";v="${ver}"`);
+}
+
+function applyChromeBrandHeaders(headers) {
+  const out = {};
+  for (const [k, v] of Object.entries(headers)) {
+    const l = k.toLowerCase();
+    out[k] = (l === 'sec-ch-ua' || l === 'sec-ch-ua-full-version-list') ? addGoogleChromeBrand(v) : v;
+  }
+  return out;
+}
+
 function applyFirefoxHeaders(headers) {
   const out = {};
   for (const [k, v] of Object.entries(headers)) {
@@ -613,7 +630,9 @@ function applyPrivacyHeaders(ses, { incognito = false } = {}) {
     if (incognito && getPrivacyFlags().incognitoFingerprintProtection) {
       out = normalizeFingerprintHeaders(headers);
     }
-    if (GOOGLE_FIREFOX_UA && isGoogleAuthRequest(details)) out = applyFirefoxHeaders(out); // строго последним
+    if (isGoogleAuthRequest(details)) {
+      out = GOOGLE_FIREFOX_UA ? applyFirefoxHeaders(out) : applyChromeBrandHeaders(out); // строго последним
+    }
     callback({ requestHeaders: out });
   });
 
@@ -1071,6 +1090,7 @@ module.exports = {
   FIREFOX_UA,
   GOOGLE_FIREFOX_UA,
   isGoogleAuthUrl,
+  addGoogleChromeBrand,
   listMediaPermissions,
   removeMediaPermission,
   getSitePermissionInfo,

@@ -1075,6 +1075,53 @@ function ptFirefoxMainWorld(ua) {
     if ('chrome' in window) Object.defineProperty(window, 'chrome', { value: undefined, configurable: true });
   }
 
+  // Chrome-режим: у Electron в navigator.userAgentData.brands нет «Google Chrome» (у настоящего Chrome он есть)
+  if (!ua && window.NavigatorUAData) {
+    try {
+      const UP = NavigatorUAData.prototype;
+      const withChrome = (list) => {
+        if (!list || typeof list.length !== 'number') return list;
+        const arr = Array.from(list, (b) => ({ brand: b.brand, version: b.version }));
+        if (arr.some((b) => b.brand === 'Google Chrome')) return list;
+        const i = arr.findIndex((b) => b.brand === 'Chromium');
+        if (i < 0) return list;
+        arr.splice(i + 1, 0, { brand: 'Google Chrome', version: arr[i].version });
+        return Object.freeze(arr.map((b) => Object.freeze(b)));
+      };
+      const bd = Object.getOwnPropertyDescriptor(UP, 'brands');
+      if (bd && bd.get) {
+        const origBrands = bd.get;
+        const g = Object.getOwnPropertyDescriptor({ get brands() { return withChrome(Reflect.apply(origBrands, this, [])); } }, 'brands').get;
+        mask(g, 'get brands');
+        Object.defineProperty(UP, 'brands', { get: g, set: undefined, enumerable: true, configurable: true });
+      }
+      const origHev = UP.getHighEntropyValues;
+      if (typeof origHev === 'function') {
+        const hev = { getHighEntropyValues() {
+          return Reflect.apply(origHev, this, arguments).then((r) => {
+            try {
+              if (r && r.brands) r.brands = withChrome(r.brands);
+              if (r && r.fullVersionList) r.fullVersionList = withChrome(r.fullVersionList);
+            } catch (e) { /* ignore */ }
+            return r;
+          });
+        } }.getHighEntropyValues;
+        mask(hev, 'getHighEntropyValues');
+        Object.defineProperty(UP, 'getHighEntropyValues', { value: hev, writable: true, configurable: true, enumerable: true });
+      }
+      const origJson = UP.toJSON;
+      if (typeof origJson === 'function') {
+        const tj = { toJSON() {
+          const r = Reflect.apply(origJson, this, arguments);
+          try { if (r && r.brands) r.brands = withChrome(r.brands); } catch (e) { /* ignore */ }
+          return r;
+        } }.toJSON;
+        mask(tj, 'toJSON');
+        Object.defineProperty(UP, 'toJSON', { value: tj, writable: true, configurable: true, enumerable: true });
+      }
+    } catch (e) { /* ignore */ }
+  }
+
   // Passkey/WebAuthn: без автозапроса Windows не показывает окно «Electron (GitHub, Inc.)»
   const deny = () => Promise.reject(new DOMException('The operation either timed out or was not allowed.', 'NotAllowedError'));
   if (window.CredentialsContainer) {
