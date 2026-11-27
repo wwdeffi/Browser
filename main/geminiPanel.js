@@ -126,6 +126,21 @@ const DESCRIBE_EDITORS_SCRIPT = `(() => {${EDITOR_FINDER}
   return { total: all.length, items: all.slice(0, 8).map(d), active: document.activeElement ? document.activeElement.tagName : null };
 })()`;
 
+// Скрипт для изолированного мира Gemini: создаёт File и «вставляет» его в поле ввода.
+// true — редактор обработал событие (отменил его действие по умолчанию), то есть файл принят
+function buildAttachScript(name, text, mime) {
+  return `(() => {${EDITOR_FINDER}
+    const el = collect(document, []).find(usable);
+    if (!el) return false;
+    const file = new File([${JSON.stringify(String(text))}], ${JSON.stringify(String(name))}, { type: ${JSON.stringify(String(mime))} });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    el.focus();
+    const ev = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true, composed: true });
+    return el.dispatchEvent(ev) === false;
+  })()`;
+}
+
 const INSERT_WAIT_MS = 8000; // сколько ждём появления поля ввода (панель могла только что открыться)
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -264,6 +279,26 @@ class GeminiPanel {
     return { ok: true };
   }
 
+  // Прикрепляет текст к чату Gemini как файл (как при нажатии «+»): в поле ввода остаётся чистое место для вопроса.
+  // Файл отдаём редактору событием paste с DataTransfer — Gemini обрабатывает его так же, как вставку файла из проводника.
+  // Результат: { ok: true } или { ok: false, reason }; при 'not-accepted' вызывающий может вставить текст обычным путём
+  async attachFile(name, text, mime = 'text/markdown') {
+    const wc = this._wc();
+    if (!wc || !text) return { ok: false, reason: 'no-panel' };
+    const run = (code) => wc.executeJavaScriptInIsolatedWorld(TIDY_WORLD_ID, [{ code }]).catch(() => false);
+    let focused = false;
+    const deadline = Date.now() + INSERT_WAIT_MS;
+    while (!focused && Date.now() < deadline) {
+      if (!this._wc()) return { ok: false, reason: 'no-panel' };
+      if (isGeminiAppUrl(wc.getURL())) focused = await run(FOCUS_EDITOR_SCRIPT);
+      if (!focused) await sleep(300);
+    }
+    if (!focused) return { ok: false, reason: isGeminiAppUrl(wc.getURL()) ? 'no-input' : 'not-signed-in' };
+    wc.focus();
+    const accepted = await run(buildAttachScript(name, text, mime));
+    return accepted ? { ok: true } : { ok: false, reason: 'not-accepted' };
+  }
+
   // rect — область панели в координатах окна; null — спрятать (закрыта, HTML-fullscreen, модалка интерфейса)
   layout(rect) {
     if (!this.view) return;
@@ -370,6 +405,7 @@ class GeminiPanel {
 
 module.exports = {
   GeminiPanel,
+  buildAttachScript,
   GEMINI_URL,
   GEMINI_GAP,
   GEMINI_MIN_WIDTH,

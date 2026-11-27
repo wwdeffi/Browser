@@ -162,6 +162,20 @@ function buildContextBlock(ctx, { maxChars = MAX_CONTEXT_CHARS } = {}) {
   return lines.join('\n');
 }
 
+// Содержимое вкладки как файл для вложения в чат Gemini: без обрамления-подсказок, только данные страницы.
+// Имя файла берём из заголовка (в плашке вложения видно, что за страница прикреплена)
+function buildContextFile(ctx, { maxChars = MAX_CONTEXT_CHARS } = {}) {
+  const body = cutText(ctx.text, maxChars);
+  const lines = [`# ${ctx.title || 'Страница'}`, ''];
+  if (ctx.url) lines.push(`Адрес: ${ctx.url}`);
+  if (ctx.pages) lines.push(`Страниц в документе: ${ctx.pages}${ctx.pagesRead < ctx.pages ? ` (прочитано ${ctx.pagesRead})` : ''}`);
+  if (ctx.selection) lines.push('', 'Выделенный пользователем фрагмент:', `"""\n${ctx.selection}\n"""`);
+  lines.push('', body.text || '(текст не найден)');
+  if (body.truncated) lines.push('', `[Текст обрезан: показано ${body.text.length} из ${body.total} символов]`);
+  const base = String(ctx.title || 'page').replace(/[\\/:*?"<>|\n\r]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) || 'page';
+  return { name: `${base}.md`, text: lines.join('\n') };
+}
+
 // ---- PDF ----
 
 let pdfjsPromise = null;
@@ -282,6 +296,7 @@ module.exports = {
   pageExtractor,
   cutText,
   buildContextBlock,
+  buildContextFile,
   extractTabContext,
   describeError
 };
