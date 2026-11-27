@@ -228,7 +228,7 @@ function describeError(err) {
   if (code === 'pdf-engine-missing') return 'Чтение PDF не установлено: выполните npm install pdfjs-dist.';
   if (code === 'pdf-too-large') return 'PDF слишком большой (больше 60 МБ).';
   if (code.startsWith('pdf-http-')) return 'Не удалось скачать PDF для чтения.';
-  return 'Не удалось прочитать вкладку.';
+  return `Не удалось прочитать вкладку (${code.slice(0, 90) || 'неизвестная ошибка'}).`;
 }
 
 // Главная функция: читает активную вкладку (webContents) и возвращает { kind, title, url, text, selection, ... }
@@ -237,16 +237,35 @@ async function extractTabContext(wc, { maxChars = MAX_CONTEXT_CHARS } = {}) {
   const url = wc.getURL();
   if (!isExtractableUrl(url)) throw new Error('unsupported');
 
-  let ctx;
+  // Результат передаём строкой JSON: объекты из изолированного мира Electron может отдавать пустыми, строка доходит всегда.
+  // Сначала читаем в изолированном мире (страница не видит наш скрипт), при сбое — в основном
+  const code = `JSON.stringify((${pageExtractor.toString()})(${Number(maxChars)}, ${MAX_SELECTION_CHARS}))`;
+  const parse = (raw) => {
+    if (typeof raw !== 'string') return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  };
+  let ctx = null;
+  let lastError = '';
   try {
-    const code = `(${pageExtractor.toString()})(${Number(maxChars)}, ${MAX_SELECTION_CHARS})`;
-    ctx = await wc.executeJavaScriptInIsolatedWorld(TAB_CONTEXT_WORLD_ID, [{ code }]);
+    ctx = parse(await wc.executeJavaScriptInIsolatedWorld(TAB_CONTEXT_WORLD_ID, [{ code }]));
   } catch (err) {
-    console.warn('[gemini-context] скрипт чтения страницы не выполнился:', err && err.message);
-    // PDF-просмотрщик и подобные документы могут не пустить скрипт: тогда ориентируемся на адрес
-    ctx = looksLikePdfUrl(url) ? { kind: 'pdf', title: wc.getTitle(), url, selection: '', text: '' } : null;
+    lastError = err && err.message;
   }
-  if (!ctx || typeof ctx !== 'object') throw new Error('read-failed');
+  if (!ctx) {
+    try {
+      ctx = parse(await wc.executeJavaScript(code, false));
+    } catch (err) {
+      lastError = err && err.message;
+    }
+  }
+  if (!ctx && looksLikePdfUrl(url)) {
+    // PDF-просмотрщик может не пустить скрипт: тогда ориентируемся на адрес
+    ctx = { kind: 'pdf', title: wc.getTitle(), url, selection: '', text: '' };
+  }
+  if (!ctx || typeof ctx !== 'object') {
+    console.warn('[gemini-context] скрипт чтения страницы не дал результата:', lastError || 'пустой ответ');
+    throw new Error(`read-failed: ${String(lastError || 'пустой ответ').slice(0, 80)}`);
+  }
 
   if (ctx.kind === 'pdf') {
     const pdf = await extractPdfText(wc, ctx.url || url, maxChars);
