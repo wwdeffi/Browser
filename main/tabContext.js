@@ -176,6 +176,17 @@ function buildContextFile(ctx, { maxChars = MAX_CONTEXT_CHARS } = {}) {
   return { name: `${base}.md`, text: lines.join('\n') };
 }
 
+// Сколько вкладок имеется в виду в запросе: «эти три вкладки» → 3, «все вкладки» → максимум, иначе 1 (активная)
+const NUM_WORDS = { одну: 1, одна: 1, две: 2, два: 2, три: 3, четыре: 4, пять: 5, шесть: 6, семь: 7, восемь: 8, девять: 9, десять: 10 };
+function parseTabCount(text, max = 10) {
+  const t = String(text || '').toLowerCase();
+  if (/(^|\s)(все|всех|всем|всё)(\s+\S+){0,2}\s+вклад(?:к|ок)|all\s+(my\s+)?tabs/.test(t)) return max;
+  const m = t.match(/(\d+|одну|одна|две|два|три|четыре|пять|шесть|семь|восемь|девять|десять)\s+(?:\S+\s+)?(?:вклад(?:к|ок)|tabs?)/);
+  if (!m) return 1;
+  const n = /^\d+$/.test(m[1]) ? Number(m[1]) : NUM_WORDS[m[1]];
+  return Math.max(1, Math.min(max, n || 1));
+}
+
 // ---- PDF ----
 
 let pdfjsPromise = null;
@@ -297,6 +308,7 @@ module.exports = {
   cutText,
   buildContextBlock,
   buildContextFile,
+  parseTabCount,
   extractTabContext,
   describeError
 };
