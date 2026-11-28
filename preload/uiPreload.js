@@ -86,6 +86,7 @@ if (window.location.protocol === 'file:') contextBridge.exposeInMainWorld('brows
   toggleGemini: () => ipcRenderer.send('ui:gemini-toggle'),
   reloadGemini: () => ipcRenderer.send('ui:gemini-reload'),
   attachGeminiContext: () => ipcRenderer.send('ui:gemini-context'),
+  pickGeminiTabs: () => ipcRenderer.send('ui:gemini-tabs'),
   resizeGemini: (width) => ipcRenderer.send('ui:gemini-resize', Number(width)),
 
   // Подсказки адресной строки (попап — отдельный WebContentsView в main)

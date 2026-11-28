@@ -881,6 +881,7 @@
   const geminiDivider = document.getElementById('gemini-divider');
   const geminiCtxBtn = document.getElementById('btn-gemini-context');
   const geminiCtxNote = document.getElementById('gemini-context-note');
+  const geminiTabsBtn = document.getElementById('btn-gemini-tabs');
   let geminiDragging = false;
   let geminiRaf = 0;
   let geminiPending = null;
@@ -898,6 +899,8 @@
     const ctx = g.context || {};
     geminiCtxBtn.hidden = !open;
     geminiCtxBtn.disabled = Boolean(ctx.busy);
+    geminiTabsBtn.hidden = !open;
+    geminiTabsBtn.disabled = Boolean(ctx.busy);
     geminiCtxBtn.dataset.state = ctx.busy ? 'busy' : ctx.error ? 'error' : ctx.note ? 'done' : '';
     geminiCtxBtn.title = ctx.note || 'Передать Gemini контекст вкладки (Alt+Shift+G)';
     geminiCtxBtn.setAttribute('aria-label', geminiCtxBtn.title);
@@ -923,6 +926,7 @@
 
   geminiBtn.addEventListener('click', () => window.browser.toggleGemini());
   geminiCtxBtn.addEventListener('click', () => window.browser.attachGeminiContext());
+  geminiTabsBtn.addEventListener('click', () => window.browser.pickGeminiTabs());
   geminiDivider.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
     geminiDragging = true;
