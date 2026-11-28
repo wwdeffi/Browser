@@ -141,6 +141,25 @@ function buildAttachScript(name, text, mime) {
   })()`;
 }
 
+// Перехват Enter в поле Gemini: если в запросе упомянуты вкладки, Enter не уходит в Gemini, а сообщает об этом браузеру
+// (через console.debug с меткой — в панели нет preload). Следующий Enter после выбора вкладок проходит свободно.
+const INTENT_MARK = '__deffi_tabs__';
+const INTENT_SCRIPT = `(() => {
+  if (window.__deffiTabIntent) return;
+  window.__deffiTabIntent = true;
+  const re = /вклад(?:к|ок)|\\btabs?\\b/i;
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.isComposing) return;
+    if (window.__deffiAllowSend) { window.__deffiAllowSend = false; return; }
+    const t = e.target;
+    const text = String((t && (t.value !== undefined ? t.value : t.innerText)) || '').trim();
+    if (!text || !re.test(text)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    console.debug('${INTENT_MARK}' + text.slice(0, 500));
+  }, true);
+})();`;
+
 const INSERT_WAIT_MS = 8000; // сколько ждём появления поля ввода (панель могла только что открыться)
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -160,8 +179,9 @@ function clampWidth(width) {
 }
 
 class GeminiPanel {
-  constructor({ win, getSession, openInTab, onShortcut, onRelayout, getBackgroundColor, width } = {}) {
+  constructor({ win, getSession, openInTab, onShortcut, onRelayout, onTabIntent, getBackgroundColor, width } = {}) {
     this.win = win;
+    this.onTabIntent = typeof onTabIntent === 'function' ? onTabIntent : null;
     this.onRelayout = typeof onRelayout === 'function' ? onRelayout : () => {};
     this.getSession = getSession;
     this.openInTab = typeof openInTab === 'function' ? openInTab : () => {};
@@ -299,6 +319,13 @@ class GeminiPanel {
     return accepted ? { ok: true } : { ok: false, reason: 'not-accepted' };
   }
 
+  // Следующий Enter в поле Gemini уйдёт как обычный: без повторного перехвата (после выбора вкладок или отмены)
+  allowNextSend() {
+    const wc = this._wc();
+    if (!wc || !isGeminiAppUrl(wc.getURL())) return;
+    wc.executeJavaScriptInIsolatedWorld(TIDY_WORLD_ID, [{ code: 'window.__deffiAllowSend = true;' }]).catch(() => {});
+  }
+
   // rect — область панели в координатах окна; null — спрятать (закрыта, HTML-fullscreen, модалка интерфейса)
   layout(rect) {
     if (!this.view) return;
@@ -381,6 +408,14 @@ class GeminiPanel {
     wc.on('dom-ready', () => {
       if (!isGeminiAppUrl(wc.getURL())) return;
       wc.executeJavaScriptInIsolatedWorld(TIDY_WORLD_ID, [{ code: TIDY_SCRIPT }]).catch(() => { /* страница ушла */ });
+      wc.executeJavaScriptInIsolatedWorld(TIDY_WORLD_ID, [{ code: INTENT_SCRIPT }]).catch(() => { /* страница ушла */ });
+    });
+
+    // Сообщение от перехватчика Enter. Из него берём только текст запроса (для числа вкладок); действие — лишь меню выбора
+    wc.on('console-message', (...args) => {
+      const message = args[0] && typeof args[0].message === 'string' ? args[0].message : args[2];
+      if (typeof message !== 'string' || !message.startsWith(INTENT_MARK)) return;
+      if (this.onTabIntent && isGeminiAppUrl(wc.getURL())) this.onTabIntent(message.slice(INTENT_MARK.length));
     });
 
     if (this.onShortcut) {
@@ -406,6 +441,8 @@ class GeminiPanel {
 module.exports = {
   GeminiPanel,
   buildAttachScript,
+  INTENT_SCRIPT,
+  INTENT_MARK,
   GEMINI_URL,
   GEMINI_GAP,
   GEMINI_MIN_WIDTH,

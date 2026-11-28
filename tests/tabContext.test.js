@@ -186,3 +186,20 @@ test('buildAttachScript: валидный JS, файл и событие paste',
   assert.doesNotThrow(() => new Function(code));
   assert.match(code, /new ClipboardEvent\('paste'/);
 });
+
+test('parseTabCount: число вкладок из запроса', () => {
+  const { parseTabCount } = require('../main/tabContext');
+  assert.equal(parseTabCount('прочитай эти три вкладки и сравни'), 3);
+  assert.equal(parseTabCount('сравни 5 вкладок'), 5);
+  assert.equal(parseTabCount('сделай конспект по всем вкладкам'), 10);
+  assert.equal(parseTabCount('сделай конспект по всем открытым вкладкам', 6), 6);
+  assert.equal(parseTabCount('прочитай вкладку'), 1);
+  assert.equal(parseTabCount('compare these 4 tabs'), 4);
+  assert.equal(parseTabCount('сравни 99 вкладок', 10), 10);
+});
+
+test('INTENT_SCRIPT: валидный JS', () => {
+  const { INTENT_SCRIPT } = require('../main/geminiPanel');
+  assert.doesNotThrow(() => new Function(INTENT_SCRIPT));
+  assert.match(INTENT_SCRIPT, /__deffi_tabs__/);
+});

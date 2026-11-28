@@ -700,17 +700,21 @@ class WindowManager {
 
   // Список открытых вкладок с галочками (до GEMINI_MAX_TABS). Нативное меню закрывается после клика, поэтому после
   // каждой галочки открываем его заново на том же месте; «Передать в Gemini» запускает чтение выбранных вкладок
-  pickTabsForGemini() {
+  pickTabsForGemini({ preselectCount = 1, fromPrompt = false } = {}) {
     if (!this.win || this.win.isDestroyed() || !this.tabManager || !this.gemini || !this.isGeminiAvailable()) return;
-    if (this._geminiContext && this._geminiContext.busy) return;
-    if (this._tabPickerOpen) return;
+    if ((this._geminiContext && this._geminiContext.busy) || this._tabPickerOpen) {
+      if (fromPrompt) this.gemini.allowNextSend();
+      return;
+    }
     const tabs = this.tabManager.tabs.filter((t) => tabContext.isExtractableUrl(t.url));
     if (!tabs.length) {
       this._setGeminiStatus({ note: 'Нет вкладок, которые можно прочитать.', error: true }, 4000);
+      if (fromPrompt) this.gemini.allowNextSend();
       return;
     }
-    const selected = new Set();
-    if (this.tabManager.activeId !== null && tabs.some((t) => t.id === this.tabManager.activeId)) selected.add(this.tabManager.activeId);
+    // Предвыбор: активная вкладка и самые недавно использованные (число берётся из запроса: «эти три вкладки»)
+    const byRecent = [...tabs].sort((a, b) => (b.id === this.tabManager.activeId) - (a.id === this.tabManager.activeId) || (b.lastActiveAt || 0) - (a.lastActiveAt || 0));
+    const selected = new Set(byRecent.slice(0, Math.max(1, Math.min(GEMINI_MAX_TABS, preselectCount))).map((t) => t.id));
 
     const cursor = screen.getCursorScreenPoint();
     const bounds = this.win.getContentBounds();
@@ -750,6 +754,7 @@ class WindowManager {
           if (action === 'toggle') { open(); return; }
           this._tabPickerOpen = false;
           if (action === 'send') this.attachTabsToGemini(tabs.filter((t) => selected.has(t.id)).map((t) => t.id));
+          else if (fromPrompt) this.gemini.allowNextSend(); // отмена: следующий Enter отправит запрос как есть
         }, 80)
       });
     };
@@ -758,6 +763,14 @@ class WindowManager {
 
   // Выбранные вкладки → вложения в чат Gemini (по файлу на вкладку). Спящие вкладки будим и ждём загрузки
   async attachTabsToGemini(ids) {
+    try {
+      await this._attachTabsToGemini(ids);
+    } finally {
+      this.gemini?.allowNextSend(); // дальше пользователь жмёт Enter сам, перехват второй раз не нужен
+    }
+  }
+
+  async _attachTabsToGemini(ids) {
     if (!this.gemini || !this.isGeminiAvailable() || !this.tabManager) return;
     if (this._geminiContext && this._geminiContext.busy) return;
     const list = (Array.isArray(ids) ? ids : []).slice(0, GEMINI_MAX_TABS);
@@ -1077,6 +1090,7 @@ class WindowManager {
       getBackgroundColor: () => this.getPageBackgroundColor(),
       openInTab: (url) => this.tabManager?.createTab(url),
       onShortcut: (event, input) => this.handleShortcut(event, input, 'gemini'),
+      onTabIntent: (text) => this.pickTabsForGemini({ preselectCount: tabContext.parseTabCount(text, GEMINI_MAX_TABS), fromPrompt: true }),
       onRelayout: () => { try { this.tabManager?.layout(); } catch { /* окно закрывается */ } }
     });
     if (opts.incognitoSession) {
