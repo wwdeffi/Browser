@@ -21,6 +21,15 @@ const MainMenuPopup = require('./mainMenuPopup');
 const { GeminiPanel, GEMINI_GAP } = require('./geminiPanel');
 const tabContext = require('./tabContext');
 const DownloadsPopup = require('./downloadsPopup');
+const GEMINI_MAX_TABS = 10;         // у Gemini не больше 10 файлов в одном запросе
+const GEMINI_TOTAL_CHARS = 300000;  // общий объём текста со всех вкладок: делится поровну
+const GEMINI_CONTEXT_REASONS = {
+  'not-signed-in': 'Войдите в Google-аккаунт в панели Gemini и повторите.',
+  'no-input': 'Не нашёл поле ввода Gemini: дождитесь загрузки панели и повторите.',
+  'no-panel': 'Панель Gemini недоступна.',
+  'paste-failed': 'Не удалось вставить текст в Gemini.'
+};
+
 const { buildCustomTheme, sanitizeSeed } = require('./customTheme');
 const { setCustomTokens } = require('./searchTheme');
 const { applyProxy: applySessionProxy } = require('./proxy');
@@ -641,23 +650,8 @@ class WindowManager {
   async attachTabContextToGemini() {
     if (!this.gemini || !this.isGeminiAvailable()) return;
     if (this._geminiContext && this._geminiContext.busy) return;
-    const setStatus = (patch, resetAfterMs) => {
-      this._geminiContext = { busy: false, note: '', error: false, ...patch };
-      clearTimeout(this._geminiContextTimer);
-      if (resetAfterMs) {
-        this._geminiContextTimer = setTimeout(() => {
-          this._geminiContext = { busy: false, note: '', error: false };
-          this.sendState();
-        }, resetAfterMs);
-      }
-      this.sendState();
-    };
-    const REASONS = {
-      'not-signed-in': 'Войдите в Google-аккаунт в панели Gemini и повторите.',
-      'no-input': 'Не нашёл поле ввода Gemini: дождитесь загрузки панели и повторите.',
-      'no-panel': 'Панель Gemini недоступна.',
-      'paste-failed': 'Не удалось вставить текст в Gemini.'
-    };
+    const setStatus = (patch, resetAfterMs) => this._setGeminiStatus(patch, resetAfterMs);
+    const REASONS = GEMINI_CONTEXT_REASONS;
 
     // Читаем вкладку ДО открытия панели: фокус и раскладка не должны менять «активную» страницу
     const wc = this._getActiveWebContents();
@@ -689,6 +683,142 @@ class WindowManager {
     } catch (err) {
       console.warn('[gemini-context] не удалось прочитать вкладку:', err);
       setStatus({ note: tabContext.describeError(err), error: true }, 5000);
+    }
+  }
+
+  _setGeminiStatus(patch, resetAfterMs) {
+    this._geminiContext = { busy: false, note: '', error: false, ...patch };
+    clearTimeout(this._geminiContextTimer);
+    if (resetAfterMs) {
+      this._geminiContextTimer = setTimeout(() => {
+        this._geminiContext = { busy: false, note: '', error: false };
+        this.sendState();
+      }, resetAfterMs);
+    }
+    this.sendState();
+  }
+
+  // Список открытых вкладок с галочками (до GEMINI_MAX_TABS). Нативное меню закрывается после клика, поэтому после
+  // каждой галочки открываем его заново на том же месте; «Передать в Gemini» запускает чтение выбранных вкладок
+  pickTabsForGemini() {
+    if (!this.win || this.win.isDestroyed() || !this.tabManager || !this.gemini || !this.isGeminiAvailable()) return;
+    if (this._geminiContext && this._geminiContext.busy) return;
+    if (this._tabPickerOpen) return;
+    const tabs = this.tabManager.tabs.filter((t) => tabContext.isExtractableUrl(t.url));
+    if (!tabs.length) {
+      this._setGeminiStatus({ note: 'Нет вкладок, которые можно прочитать.', error: true }, 4000);
+      return;
+    }
+    const selected = new Set();
+    if (this.tabManager.activeId !== null && tabs.some((t) => t.id === this.tabManager.activeId)) selected.add(this.tabManager.activeId);
+
+    const cursor = screen.getCursorScreenPoint();
+    const bounds = this.win.getContentBounds();
+    const at = { x: Math.round(cursor.x - bounds.x), y: Math.round(cursor.y - bounds.y) };
+    const esc = (s) => String(s || '').replace(/&/g, '&&');
+    const clip = (s, n) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+    this._tabPickerOpen = true;
+    const open = () => {
+      if (!this.win || this.win.isDestroyed()) { this._tabPickerOpen = false; return; }
+      let action = null; // 'toggle' | 'send' — выставляет клик по пункту
+      const full = selected.size >= GEMINI_MAX_TABS;
+      const template = [
+        { label: `Вкладки для Gemini (выбрано ${selected.size} из ${GEMINI_MAX_TABS})`, enabled: false },
+        { type: 'separator' },
+        ...tabs.map((t) => ({
+          type: 'checkbox',
+          checked: selected.has(t.id),
+          enabled: selected.has(t.id) || !full,
+          label: esc(clip(`${t.title || t.url}${t.sleeping ? ' (спит)' : ''}`, 60)),
+          click: () => {
+            if (selected.has(t.id)) selected.delete(t.id);
+            else selected.add(t.id);
+            action = 'toggle';
+          }
+        })),
+        { type: 'separator' },
+        { label: 'Передать в Gemini', enabled: selected.size > 0, click: () => { action = 'send'; } }
+      ];
+      const menu = Menu.buildFromTemplate(template);
+      menu.popup({
+        window: this.win,
+        x: at.x,
+        y: at.y,
+        // Порядок «клик → закрытие» зависит от ОС: даём клику сработать и только потом смотрим, что выбрано
+        callback: () => setTimeout(() => {
+          if (action === 'toggle') { open(); return; }
+          this._tabPickerOpen = false;
+          if (action === 'send') this.attachTabsToGemini(tabs.filter((t) => selected.has(t.id)).map((t) => t.id));
+        }, 80)
+      });
+    };
+    open();
+  }
+
+  // Выбранные вкладки → вложения в чат Gemini (по файлу на вкладку). Спящие вкладки будим и ждём загрузки
+  async attachTabsToGemini(ids) {
+    if (!this.gemini || !this.isGeminiAvailable() || !this.tabManager) return;
+    if (this._geminiContext && this._geminiContext.busy) return;
+    const list = (Array.isArray(ids) ? ids : []).slice(0, GEMINI_MAX_TABS);
+    if (!list.length) return;
+    const perTab = Math.min(tabContext.MAX_CONTEXT_CHARS, Math.floor(GEMINI_TOTAL_CHARS / list.length));
+    const files = [];
+    const failed = [];
+    try {
+      for (let i = 0; i < list.length; i++) {
+        const tab = this.tabManager.tabs.find((t) => t.id === list[i]);
+        if (!tab) { failed.push('закрыта'); continue; }
+        this._setGeminiStatus({ busy: true, note: `Читаю вкладки: ${i + 1} из ${list.length}…` });
+        try {
+          if (tab.sleeping || !tab.view) this.tabManager.wakeTab(tab);
+          const wc = await this._waitTabLoaded(tab);
+          const ctx = await tabContext.extractTabContext(wc, { maxChars: perTab });
+          const file = tabContext.buildContextFile(ctx, { maxChars: perTab });
+          files.push({ name: `${files.length + 1}. ${file.name}`, text: file.text, ctx });
+        } catch (err) {
+          console.warn('[gemini-tabs] вкладку не прочитать:', err && err.message);
+          failed.push((tab.title || tab.url || '').slice(0, 30));
+        }
+      }
+      if (!files.length) {
+        this._setGeminiStatus({ note: 'Ни одну из выбранных вкладок прочитать не удалось.', error: true }, 5000);
+        return;
+      }
+      if (!this.gemini.isOpen()) this.toggleGeminiPanel(true);
+      let sent = 0;
+      for (const f of files) {
+        let res = await this.gemini.attachFile(f.name, f.text).catch(() => ({ ok: false, reason: 'paste-failed' }));
+        if (!res.ok && res.reason === 'not-accepted') {
+          res = await this.gemini.insertText(tabContext.buildContextBlock(f.ctx, { maxChars: Math.floor(GEMINI_TOTAL_CHARS / files.length) }))
+            .catch(() => ({ ok: false, reason: 'paste-failed' }));
+        }
+        if (!res.ok) {
+          this._setGeminiStatus({ note: GEMINI_CONTEXT_REASONS[res.reason] || 'Не удалось передать контекст в Gemini.', error: true }, 5000);
+          return;
+        }
+        sent++;
+        await new Promise((resolve) => setTimeout(resolve, 600)); // Gemini обрабатывает вложения по одному
+      }
+      const skipped = failed.length ? `, пропущено: ${failed.length}` : '';
+      this._setGeminiStatus({ note: `Контекст добавлен: вкладок ${sent}${skipped}` }, 4000);
+    } catch (err) {
+      console.warn('[gemini-tabs] сбой:', err);
+      this._setGeminiStatus({ note: tabContext.describeError(err), error: true }, 5000);
+    }
+  }
+
+  // Ждёт, пока вкладка (в том числе только что разбуженная) загрузится; возвращает её webContents
+  async _waitTabLoaded(tab, timeoutMs = 12000) {
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      const wc = tab.view && !tab.view.webContents.isDestroyed() ? tab.view.webContents : null;
+      if (wc && !wc.isLoading() && !tab.sleeping) return wc;
+      if (Date.now() > deadline) {
+        if (wc) return wc; // не дождались полной загрузки — читаем что есть
+        throw new Error('no-tab');
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150));
     }
   }
 
@@ -1197,6 +1327,13 @@ class WindowManager {
     if (alt && shift && !ctrl && code === 'KeyG') {
       event.preventDefault();
       this.attachTabContextToGemini();
+      return;
+    }
+
+    // Alt+Shift+T — выбрать вкладки (до 10) и передать их Gemini
+    if (alt && shift && !ctrl && code === 'KeyT') {
+      event.preventDefault();
+      this.pickTabsForGemini();
       return;
     }
 
